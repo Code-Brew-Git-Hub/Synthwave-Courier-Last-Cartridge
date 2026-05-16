@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Synthwave Courier: Last Cartridge v0.2</title>
+  <title>Synthwave Courier: Last Cartridge v0.3</title>
   <style>
     * { box-sizing: border-box; user-select: none; }
     html, body {
@@ -105,7 +105,7 @@
       <h1 class="title">Synthwave Courier</h1>
       <p class="subtitle">
         Доставь последний игровой картридж в аркадный клуб до полуночи.<br />
-        Следи за стрелкой и мини-картой. Город глючит, дроны охотятся.
+        Следи за жёлтой стрелкой: она ведёт к следующей точке маршрута.
       </p>
       <div class="controls">
         <div><span class="key">WASD / Стрелки</span> — движение</div>
@@ -146,6 +146,7 @@
     let audioCtx = null;
     let engineOsc = null;
     let engineGain = null;
+    let currentRouteIndex = 0;
 
     const player = {
       x: 160,
@@ -156,17 +157,17 @@
       speed: 0,
       maxSpeed: 430,
       boostMaxSpeed: 630,
-      acceleration: 780,
-      brake: 980,
-      friction: 0.966,
-      turnSpeed: 3.25,
+      acceleration: 820,
+      brake: 1030,
+      friction: 0.968,
+      turnSpeed: 5.25,
+      lowSpeedTurnBoost: 1.55,
       hp: 100,
       boost: 100,
       score: 0
     };
 
     const camera = { x: 0, y: 0 };
-
     const destination = { x: WORLD.width - 260, y: 180, w: 170, h: 120 };
 
     const roads = [
@@ -184,11 +185,16 @@
     const drones = [];
     const bonuses = [];
     const glitches = [];
+
     const routeBeacons = [
-      { x: 580, y: 1115 },
-      { x: 1075, y: 690 },
-      { x: 1565, y: 690 },
-      { x: 1970, y: 190 }
+      { x: 580, y: 1415, label: '01' },
+      { x: 580, y: 1110, label: '02' },
+      { x: 1075, y: 1110, label: '03' },
+      { x: 1075, y: 690, label: '04' },
+      { x: 1565, y: 690, label: '05' },
+      { x: 1565, y: 330, label: '06' },
+      { x: 1975, y: 190, label: '07' },
+      { x: destination.x + destination.w / 2, y: destination.y + destination.h / 2, label: 'CLUB' }
     ];
 
     function resize() {
@@ -226,6 +232,7 @@
       player.boost = 100;
       player.score = 0;
       timeLeft = 105;
+      currentRouteIndex = 0;
       shake = 0;
       flash = 0;
       createWorldObjects();
@@ -239,15 +246,15 @@
         engineOsc = audioCtx.createOscillator();
         engineGain = audioCtx.createGain();
         engineOsc.type = 'sawtooth';
-        engineOsc.frequency.value = 55;
-        engineGain.gain.value = 0.025;
+        engineOsc.frequency.value = 50;
+        engineGain.gain.value = 0.0035;
         engineOsc.connect(engineGain);
         engineGain.connect(audioCtx.destination);
         engineOsc.start();
       } catch (e) {}
     }
 
-    function beep(freq = 440, duration = 0.06, volume = 0.08, type = 'square') {
+    function beep(freq = 440, duration = 0.045, volume = 0.018, type = 'square') {
       if (!audioCtx) return;
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
@@ -266,8 +273,8 @@
       drones.length = 0;
       bonuses.length = 0;
       glitches.length = 0;
-
       const blockedRects = [...roads, destination];
+
       for (let y = 80; y < WORLD.height - 80; y += 210) {
         for (let x = 80; x < WORLD.width - 80; x += 260) {
           const b = { x: x + Math.random() * 40, y: y + Math.random() * 40, w: 110 + Math.random() * 80, h: 90 + Math.random() * 80, glow: Math.random() };
@@ -291,25 +298,12 @@
       const bonusTypes = ['boost', 'repair', 'time'];
       for (let i = 0; i < 20; i++) {
         const road = roads[Math.floor(Math.random() * roads.length)];
-        bonuses.push({
-          x: road.x + 30 + Math.random() * Math.max(10, road.w - 60),
-          y: road.y + 30 + Math.random() * Math.max(10, road.h - 60),
-          r: 15,
-          type: bonusTypes[i % bonusTypes.length],
-          taken: false,
-          pulse: Math.random() * Math.PI * 2
-        });
+        bonuses.push({ x: road.x + 30 + Math.random() * Math.max(10, road.w - 60), y: road.y + 30 + Math.random() * Math.max(10, road.h - 60), r: 15, type: bonusTypes[i % bonusTypes.length], taken: false, pulse: Math.random() * Math.PI * 2 });
       }
 
       for (let i = 0; i < 20; i++) {
         const road = roads[Math.floor(Math.random() * roads.length)];
-        glitches.push({
-          x: road.x + Math.random() * road.w,
-          y: road.y + Math.random() * road.h,
-          w: 34 + Math.random() * 46,
-          h: 18 + Math.random() * 30,
-          damage: 13
-        });
+        glitches.push({ x: road.x + Math.random() * road.w, y: road.y + Math.random() * road.h, w: 34 + Math.random() * 46, h: 18 + Math.random() * 30, damage: 13 });
       }
     }
 
@@ -325,12 +319,24 @@
     function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
     function distance(a, b, c, d) { return Math.hypot(a - c, b - d); }
 
+    function getCurrentTarget() {
+      return routeBeacons[Math.min(currentRouteIndex, routeBeacons.length - 1)];
+    }
+
+    function updateRouteProgress() {
+      const target = getCurrentTarget();
+      if (distance(player.x, player.y, target.x, target.y) < 95 && currentRouteIndex < routeBeacons.length - 1) {
+        currentRouteIndex++;
+        beep(620, 0.035, 0.014, 'triangle');
+      }
+    }
+
     function update(dt) {
       if (state !== 'playing') return;
 
-      if (engineOsc) {
-        engineOsc.frequency.value = 55 + Math.abs(player.speed) * 0.12;
-        engineGain.gain.value = 0.018 + Math.min(0.03, Math.abs(player.speed) / 18000);
+      if (engineOsc && engineGain) {
+        engineOsc.frequency.value = 44 + Math.abs(player.speed) * 0.075;
+        engineGain.gain.value = 0.002 + Math.min(0.006, Math.abs(player.speed) / 90000);
       }
 
       timeLeft -= dt;
@@ -351,9 +357,11 @@
       if (boost) player.boost = Math.max(0, player.boost - 35 * dt);
       else player.boost = Math.min(100, player.boost + 13 * dt);
 
-      const turnFactor = clamp(Math.abs(player.speed) / 260, 0.25, 1);
-      if (left) player.angle -= player.turnSpeed * turnFactor * dt * Math.sign(player.speed || 1);
-      if (right) player.angle += player.turnSpeed * turnFactor * dt * Math.sign(player.speed || 1);
+      const speedAbs = Math.abs(player.speed);
+      const speedTurnFactor = clamp(speedAbs / 260, 0.45, 1.08);
+      const lowSpeedBoost = speedAbs < 145 ? player.lowSpeedTurnBoost : 1;
+      if (left) player.angle -= player.turnSpeed * speedTurnFactor * lowSpeedBoost * dt * Math.sign(player.speed || 1);
+      if (right) player.angle += player.turnSpeed * speedTurnFactor * lowSpeedBoost * dt * Math.sign(player.speed || 1);
 
       const oldX = player.x;
       const oldY = player.y;
@@ -373,7 +381,7 @@
           player.speed *= -0.35;
           player.hp -= 16 * dt;
           shake = Math.max(shake, 7);
-          beep(90, 0.045, 0.05, 'sawtooth');
+          beep(90, 0.035, 0.012, 'sawtooth');
         }
       }
 
@@ -409,7 +417,7 @@
           player.hp -= 24 * dt;
           player.speed *= 0.965;
           shake = Math.max(shake, 9);
-          if (d.cooldown <= 0) { beep(150, 0.05, 0.06, 'square'); d.cooldown = 0.5; }
+          if (d.cooldown <= 0) { beep(150, 0.04, 0.012, 'square'); d.cooldown = 0.5; }
         }
       }
 
@@ -423,9 +431,11 @@
           if (bonus.type === 'repair') player.hp = Math.min(100, player.hp + 28);
           if (bonus.type === 'time') timeLeft = Math.min(120, timeLeft + 9);
           flash = Math.max(flash, 0.14);
-          beep(bonus.type === 'repair' ? 660 : bonus.type === 'time' ? 520 : 780, 0.07, 0.07, 'triangle');
+          beep(bonus.type === 'repair' ? 660 : bonus.type === 'time' ? 520 : 780, 0.05, 0.016, 'triangle');
         }
       }
+
+      updateRouteProgress();
 
       if (rectsOverlap(carRect, destination)) {
         endGame(true, `Картридж доставлен. Итоговый счёт: ${Math.floor(player.score + timeLeft * 25 + player.hp * 10)}.`);
@@ -443,8 +453,8 @@
 
     function endGame(win, text) {
       state = win ? 'win' : 'lose';
-      if (engineGain) engineGain.gain.value = 0.005;
-      beep(win ? 880 : 110, 0.25, 0.08, win ? 'triangle' : 'sawtooth');
+      if (engineGain) engineGain.gain.value = 0.0015;
+      beep(win ? 880 : 110, 0.16, 0.018, win ? 'triangle' : 'sawtooth');
       result.classList.remove('hidden');
       resultTitle.textContent = win ? 'DELIVERED' : 'GAME OVER';
       resultText.textContent = text;
@@ -488,19 +498,28 @@
 
     function drawRouteBeacons() {
       ctx.save();
-      ctx.strokeStyle = 'rgba(0,245,255,0.5)';
-      ctx.fillStyle = 'rgba(0,245,255,0.35)';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([10, 12]);
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.shadowColor = '#ffd166';
+      ctx.shadowBlur = 10;
+      ctx.strokeStyle = 'rgba(255,209,102,0.75)';
+      ctx.setLineDash([18, 14]);
       ctx.beginPath();
-      ctx.moveTo(160, WORLD.height - 180);
-      for (const b of routeBeacons) ctx.lineTo(b.x, b.y);
-      ctx.lineTo(destination.x + destination.w / 2, destination.y + destination.h / 2);
+      ctx.moveTo(player.x, player.y);
+      for (let i = currentRouteIndex; i < routeBeacons.length; i++) ctx.lineTo(routeBeacons[i].x, routeBeacons[i].y);
       ctx.stroke();
       ctx.setLineDash([]);
-      for (const b of routeBeacons) {
-        ctx.shadowColor = '#00f5ff'; ctx.shadowBlur = 14;
-        ctx.beginPath(); ctx.arc(b.x, b.y, 12, 0, Math.PI * 2); ctx.fill();
+
+      for (let i = 0; i < routeBeacons.length; i++) {
+        const b = routeBeacons[i];
+        const isCurrent = i === currentRouteIndex;
+        const isPassed = i < currentRouteIndex;
+        ctx.shadowColor = isCurrent ? '#ffd166' : '#00f5ff';
+        ctx.shadowBlur = isCurrent ? 22 : 8;
+        ctx.fillStyle = isPassed ? 'rgba(60,255,126,0.45)' : isCurrent ? '#ffd166' : 'rgba(0,245,255,0.35)';
+        ctx.beginPath(); ctx.arc(b.x, b.y, isCurrent ? 18 : 11, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#080014'; ctx.font = 'bold 10px Courier New'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(isCurrent ? 'GO' : '', b.x, b.y + 1);
       }
       ctx.restore();
     }
@@ -561,18 +580,17 @@
 
     function drawDirectionArrow() {
       if (state !== 'playing') return;
-      const targetX = destination.x + destination.w / 2;
-      const targetY = destination.y + destination.h / 2;
-      const dx = targetX - player.x;
-      const dy = targetY - player.y;
+      const target = getCurrentTarget();
+      const dx = target.x - player.x;
+      const dy = target.y - player.y;
       const angle = Math.atan2(dy, dx);
       const cx = window.innerWidth / 2;
       const cy = 82;
       ctx.save(); ctx.translate(cx, cy); ctx.rotate(angle);
-      ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 16; ctx.fillStyle = '#ffd166';
-      ctx.beginPath(); ctx.moveTo(34, 0); ctx.lineTo(-18, -16); ctx.lineTo(-8, 0); ctx.lineTo(-18, 16); ctx.closePath(); ctx.fill();
+      ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 18; ctx.fillStyle = '#ffd166';
+      ctx.beginPath(); ctx.moveTo(38, 0); ctx.lineTo(-20, -18); ctx.lineTo(-8, 0); ctx.lineTo(-20, 18); ctx.closePath(); ctx.fill();
       ctx.restore();
-      ctx.save(); ctx.font = 'bold 14px Courier New'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffd166'; ctx.fillText(`${Math.floor(Math.hypot(dx, dy))}m`, cx, cy + 42); ctx.restore();
+      ctx.save(); ctx.font = 'bold 14px Courier New'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffd166'; ctx.fillText(`${target.label} · ${Math.floor(Math.hypot(dx, dy))}m`, cx, cy + 42); ctx.restore();
     }
 
     function drawHud() {
@@ -580,7 +598,7 @@
       ctx.save(); ctx.font = 'bold 20px Courier New'; ctx.textAlign = 'left'; ctx.fillStyle = '#00f5ff'; ctx.shadowColor = '#00f5ff'; ctx.shadowBlur = 10;
       ctx.fillText(`TIME ${Math.max(0, Math.ceil(timeLeft)).toString().padStart(3, '0')}`, 24, 36); ctx.fillText(`SCORE ${Math.floor(player.score)}`, 24, 66);
       drawBar(24, 88, 220, 16, player.hp / 100, '#ff2bd6', 'HP'); drawBar(24, 116, 220, 16, player.boost / 100, '#00f5ff', 'BOOST');
-      ctx.textAlign = 'right'; ctx.fillStyle = '#ffd166'; ctx.fillText('DESTINATION → ARCADE CLUB', window.innerWidth - 24, 36);
+      ctx.textAlign = 'right'; ctx.fillStyle = '#ffd166'; ctx.fillText('FOLLOW YELLOW ROUTE → ARCADE CLUB', window.innerWidth - 24, 36);
       ctx.restore();
     }
 
@@ -597,6 +615,14 @@
       ctx.fillStyle = 'rgba(5,0,12,0.78)'; ctx.fillRect(x, y, mapW, mapH);
       ctx.strokeStyle = '#00f5ff'; ctx.lineWidth = 2; ctx.shadowColor = '#00f5ff'; ctx.shadowBlur = 8; ctx.strokeRect(x, y, mapW, mapH); ctx.shadowBlur = 0;
       ctx.fillStyle = 'rgba(255,43,214,0.42)'; for (const r of roads) ctx.fillRect(x + r.x * sx, y + r.y * sy, r.w * sx, r.h * sy);
+      ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 2; ctx.beginPath();
+      for (let i = currentRouteIndex; i < routeBeacons.length; i++) {
+        const bx = x + routeBeacons[i].x * sx;
+        const by = y + routeBeacons[i].y * sy;
+        if (i === currentRouteIndex) ctx.moveTo(x + player.x * sx, y + player.y * sy);
+        ctx.lineTo(bx, by);
+      }
+      ctx.stroke();
       ctx.fillStyle = '#ffd166'; ctx.fillRect(x + player.x * sx - 3, y + player.y * sy - 3, 6, 6);
       ctx.fillStyle = '#00f5ff'; ctx.fillRect(x + destination.x * sx, y + destination.y * sy, destination.w * sx, destination.h * sy);
       ctx.fillStyle = '#ff2bd6'; for (const d of drones) ctx.fillRect(x + d.x * sx - 2, y + d.y * sy - 2, 4, 4);
