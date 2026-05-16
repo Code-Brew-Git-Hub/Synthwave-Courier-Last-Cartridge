@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Synthwave Courier: Last Cartridge v0.4</title>
+  <title>Synthwave Courier: Last Cartridge v0.5</title>
   <style>
     * { box-sizing: border-box; user-select: none; }
     html, body {
@@ -105,7 +105,7 @@
       <h1 class="title">Synthwave Courier</h1>
       <p class="subtitle">
         Доставь последний игровой картридж в аркадный клуб до полуночи.<br />
-        Следи за жёлтой стрелкой: она ведёт к следующей точке маршрута.
+        Жёлтая линия показывает рекомендуемый короткий путь, но ехать можно как угодно.
       </p>
       <div class="controls">
         <div><span class="key">WASD / Стрелки</span> — движение</div>
@@ -185,6 +185,10 @@
     const drones = [];
     const bonuses = [];
     const glitches = [];
+    const neonSigns = [];
+    const roadLights = [];
+    const cityParticles = [];
+    const carTrails = [];
 
     const routeBeacons = [
       { x: 580, y: 1415, label: '01' },
@@ -273,6 +277,8 @@
       drones.length = 0;
       bonuses.length = 0;
       glitches.length = 0;
+      neonSigns.length = 0;
+      roadLights.length = 0;
       const blockedRects = [...roads, destination];
 
       for (let y = 80; y < WORLD.height - 80; y += 210) {
@@ -303,7 +309,45 @@
 
       for (let i = 0; i < 20; i++) {
         const road = roads[Math.floor(Math.random() * roads.length)];
-        glitches.push({ x: road.x + Math.random() * road.w, y: road.y + Math.random() * road.h, w: 34 + Math.random() * 46, h: 18 + Math.random() * 30, damage: 13 });
+        glitches.push({ x: road.x + Math.random() * road.w, y: road.y + Math.random() * road.h, w: 34 + Math.random() * 46, h: 18 + Math.random() * 30, damage: 13, phase: Math.random() * Math.PI * 2 });
+      }
+
+      createVisualObjects();
+    }
+
+    function createVisualObjects() {
+      const signTexts = ['TARGEM', 'READY', '1986', 'ARCADE', 'NEON', 'INSERT COIN', 'LEVEL UP', 'CRT'];
+      for (let i = 0; i < 22; i++) {
+        const b = buildings[Math.floor(Math.random() * buildings.length)];
+        if (!b) continue;
+        neonSigns.push({
+          x: b.x + 8 + Math.random() * Math.max(8, b.w - 70),
+          y: b.y + 12 + Math.random() * Math.max(8, b.h - 40),
+          w: 42 + Math.random() * 34,
+          h: 14 + Math.random() * 12,
+          text: signTexts[i % signTexts.length],
+          phase: Math.random() * Math.PI * 2,
+          color: i % 2 === 0 ? '#00f5ff' : '#ff2bd6'
+        });
+      }
+
+      for (const r of roads) {
+        const horizontal = r.w > r.h;
+        const count = Math.floor((horizontal ? r.w : r.h) / 170);
+        for (let i = 1; i < count; i++) {
+          roadLights.push({
+            x: horizontal ? r.x + i * 170 : r.x + r.w / 2,
+            y: horizontal ? r.y + 18 : r.y + i * 170,
+            side: -1,
+            phase: Math.random() * Math.PI * 2
+          });
+          roadLights.push({
+            x: horizontal ? r.x + i * 170 : r.x + r.w / 2,
+            y: horizontal ? r.y + r.h - 18 : r.y + i * 170,
+            side: 1,
+            phase: Math.random() * Math.PI * 2
+          });
+        }
       }
     }
 
@@ -357,6 +401,14 @@
 
       const oldX = player.x;
       const oldY = player.y;
+      if (Math.abs(player.speed) > 80) {
+        carTrails.push({
+          x: player.x - Math.cos(player.angle) * 28,
+          y: player.y - Math.sin(player.angle) * 28,
+          life: 0.42,
+          size: 5 + Math.min(9, Math.abs(player.speed) / 80)
+        });
+      }
       player.x += Math.cos(player.angle) * player.speed * dt;
       player.y += Math.sin(player.angle) * player.speed * dt;
       player.x = clamp(player.x, 30, WORLD.width - 30);
@@ -436,6 +488,23 @@
       player.score += dt * Math.max(0, player.speed) * 0.04;
       camera.x = clamp(player.x - window.innerWidth / 2, 0, WORLD.width - window.innerWidth);
       camera.y = clamp(player.y - window.innerHeight / 2, 0, WORLD.height - window.innerHeight);
+      for (let i = carTrails.length - 1; i >= 0; i--) {
+        carTrails[i].life -= dt;
+        if (carTrails[i].life <= 0) carTrails.splice(i, 1);
+      }
+      if (Math.random() < 0.22) {
+        cityParticles.push({
+          x: camera.x + Math.random() * window.innerWidth,
+          y: camera.y - 20,
+          vy: 70 + Math.random() * 120,
+          life: 1.4 + Math.random() * 0.8
+        });
+      }
+      for (let i = cityParticles.length - 1; i >= 0; i--) {
+        cityParticles[i].y += cityParticles[i].vy * dt;
+        cityParticles[i].life -= dt;
+        if (cityParticles[i].life <= 0) cityParticles.splice(i, 1);
+      }
       shake *= Math.pow(0.84, dt * 60);
       flash = Math.max(0, flash - dt);
     }
@@ -459,7 +528,7 @@
       const sy = (Math.random() - 0.5) * shake;
       ctx.save();
       ctx.translate(-camera.x + sx, -camera.y + sy);
-      drawBackground(); drawRoads(); drawRouteBeacons(); drawDestination(); drawBuildings(); drawGlitches(); drawBonuses(); drawDrones(); drawPlayer();
+      drawBackground(); drawFarCity(); drawRoads(); drawRoadLights(); drawRouteBeacons(); drawDestination(); drawBuildings(); drawNeonSigns(); drawGlitches(); drawBonuses(); drawDrones(); drawCarTrails(); drawPlayer(); drawCityParticles();
       ctx.restore();
       drawDirectionArrow();
       drawHud();
@@ -475,6 +544,21 @@
       for (let y = 0; y < WORLD.height; y += 80) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(WORLD.width, y); ctx.stroke(); }
     }
 
+    function drawFarCity() {
+      ctx.save();
+      const baseY = camera.y + window.innerHeight - 170;
+      for (let i = 0; i < 36; i++) {
+        const x = ((i * 173) % WORLD.width);
+        const h = 80 + ((i * 47) % 170);
+        const w = 48 + ((i * 29) % 80);
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(12,0,32,0.62)' : 'rgba(20,0,45,0.5)';
+        ctx.fillRect(x, baseY - h, w, h);
+        ctx.strokeStyle = i % 3 === 0 ? 'rgba(0,245,255,0.35)' : 'rgba(255,43,214,0.28)';
+        ctx.strokeRect(x, baseY - h, w, h);
+      }
+      ctx.restore();
+    }
+
     function drawRoads() {
       for (const r of roads) {
         ctx.fillStyle = '#120828'; ctx.fillRect(r.x, r.y, r.w, r.h);
@@ -485,6 +569,21 @@
         else { ctx.moveTo(r.x + r.w / 2, r.y + 20); ctx.lineTo(r.x + r.w / 2, r.y + r.h - 20); }
         ctx.stroke(); ctx.setLineDash([]);
       }
+    }
+
+    function drawRoadLights() {
+      ctx.save();
+      for (const l of roadLights) {
+        l.phase += 0.035;
+        const pulse = 0.45 + Math.sin(l.phase) * 0.25;
+        ctx.shadowColor = '#ffd166';
+        ctx.shadowBlur = 10 + pulse * 10;
+        ctx.fillStyle = `rgba(255,209,102,${0.45 + pulse * 0.35})`;
+        ctx.beginPath();
+        ctx.arc(l.x, l.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
     }
 
     function drawRouteBeacons() {
@@ -519,9 +618,18 @@
 
     function drawDestination() {
       ctx.save();
-      ctx.shadowColor = '#00f5ff'; ctx.shadowBlur = 24; ctx.fillStyle = 'rgba(0,245,255,0.18)'; ctx.fillRect(destination.x, destination.y, destination.w, destination.h);
-      ctx.strokeStyle = '#00f5ff'; ctx.lineWidth = 4; ctx.strokeRect(destination.x, destination.y, destination.w, destination.h); ctx.shadowBlur = 0;
-      ctx.fillStyle = '#00f5ff'; ctx.font = '20px Courier New'; ctx.textAlign = 'center'; ctx.fillText('ARCADE CLUB', destination.x + destination.w / 2, destination.y + 68);
+      const pulse = 0.75 + Math.sin(performance.now() / 220) * 0.25;
+      ctx.shadowColor = '#00f5ff'; ctx.shadowBlur = 26 + pulse * 18;
+      ctx.fillStyle = 'rgba(0,245,255,0.18)'; ctx.fillRect(destination.x, destination.y, destination.w, destination.h);
+      ctx.strokeStyle = '#00f5ff'; ctx.lineWidth = 4; ctx.strokeRect(destination.x, destination.y, destination.w, destination.h);
+      ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(destination.x - 42, destination.y + destination.h + 8);
+      ctx.lineTo(destination.x + destination.w + 42, destination.y + destination.h + 8);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#00f5ff'; ctx.font = '20px Courier New'; ctx.textAlign = 'center'; ctx.fillText('ARCADE CLUB', destination.x + destination.w / 2, destination.y + 62);
+      ctx.fillStyle = '#ffd166'; ctx.font = '12px Courier New'; ctx.fillText('INSERT CARTRIDGE', destination.x + destination.w / 2, destination.y + 86);
       ctx.restore();
     }
 
@@ -536,9 +644,33 @@
 
     function drawGlitches() {
       for (const g of glitches) {
-        ctx.fillStyle = 'rgba(255,43,214,0.22)'; ctx.fillRect(g.x, g.y, g.w, g.h);
+        g.phase += 0.08;
+        const jitter = Math.sin(g.phase) * 3;
+        ctx.fillStyle = 'rgba(255,43,214,0.22)'; ctx.fillRect(g.x + jitter, g.y, g.w, g.h);
+        ctx.fillStyle = 'rgba(0,245,255,0.13)'; ctx.fillRect(g.x - jitter, g.y + 5, g.w * 0.7, g.h * 0.45);
         ctx.strokeStyle = 'rgba(255,43,214,0.7)'; ctx.strokeRect(g.x, g.y, g.w, g.h);
       }
+    }
+
+    function drawNeonSigns() {
+      ctx.save();
+      for (const s of neonSigns) {
+        s.phase += 0.045;
+        const alpha = 0.58 + Math.sin(s.phase) * 0.28;
+        ctx.shadowColor = s.color;
+        ctx.shadowBlur = 14 + alpha * 10;
+        ctx.fillStyle = `rgba(${s.color === '#00f5ff' ? '0,245,255' : '255,43,214'},${alpha})`;
+        ctx.fillRect(s.x, s.y, s.w, s.h);
+        ctx.strokeStyle = s.color;
+        ctx.strokeRect(s.x, s.y, s.w, s.h);
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#080014';
+        ctx.font = 'bold 7px Courier New';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(s.text.slice(0, 8), s.x + s.w / 2, s.y + s.h / 2 + 1);
+      }
+      ctx.restore();
     }
 
     function drawBonuses() {
@@ -560,6 +692,36 @@
         ctx.beginPath(); ctx.moveTo(0, -d.r); ctx.lineTo(d.r, 0); ctx.lineTo(0, d.r); ctx.lineTo(-d.r, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
         ctx.restore();
       }
+    }
+
+    function drawCarTrails() {
+      ctx.save();
+      for (const t of carTrails) {
+        const alpha = Math.max(0, t.life / 0.42);
+        ctx.shadowColor = '#00f5ff';
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = `rgba(0,245,255,${alpha * 0.28})`;
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, t.size * alpha, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawCityParticles() {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(0,245,255,0.18)';
+      ctx.lineWidth = 1;
+      for (const p of cityParticles) {
+        const alpha = Math.max(0, Math.min(1, p.life));
+        ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x - 12, p.y + 22);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      ctx.restore();
     }
 
     function drawPlayer() {
