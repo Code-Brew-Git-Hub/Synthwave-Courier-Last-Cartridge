@@ -507,8 +507,8 @@
         const dy = player.y - pad.y;
         if (Math.abs(dx) < 58 && Math.abs(dy) < 42 && pad.cooldown <= 0) {
           const forwardAngle = pad.angle;
-          player.angle = forwardAngle;
-          player.speed = Math.max(player.speed, player.boostMaxSpeed * 0.92);
+          const direction = Math.sign(player.speed || 1);
+          player.speed = direction * Math.max(Math.abs(player.speed), player.boostMaxSpeed * 0.82);
           player.boost = Math.min(100, player.boost + 22);
           pad.cooldown = 1.2;
           shake = Math.max(shake, 5);
@@ -885,7 +885,10 @@
 
     function drawMinimap() {
       if (state !== 'playing') return;
-      const mapW = 230, mapH = 150, x = window.innerWidth - mapW - 24, y = window.innerHeight - mapH - 24;
+      const mapW = Math.min(360, Math.max(300, window.innerWidth * 0.24));
+      const mapH = Math.min(240, Math.max(200, window.innerHeight * 0.24));
+      const x = window.innerWidth - mapW - 24;
+      const y = window.innerHeight - mapH - 24;
       const sx = mapW / WORLD.width, sy = mapH / WORLD.height;
       ctx.save();
       ctx.fillStyle = 'rgba(5,0,12,0.78)'; ctx.fillRect(x, y, mapW, mapH);
