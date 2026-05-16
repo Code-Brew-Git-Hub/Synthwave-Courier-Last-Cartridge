@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Synthwave Courier: Last Cartridge v0.3</title>
+  <title>Synthwave Courier: Last Cartridge v0.4</title>
   <style>
     * { box-sizing: border-box; user-select: none; }
     html, body {
@@ -104,14 +104,8 @@
     <div class="panel">
       <h1 class="title">Synthwave Courier</h1>
       <p class="subtitle">
-        1987 год. Корпорация NEXACOM закрывает последние аркадные клубы.
-        <br /><br />
-        У тебя остался последний картридж.
-        Если ты успеешь доставить его до полуночи — аркадная сцена выживет.
-        <br /><br />
-        Следуй по жёлтому маршруту.
-        Избегай дронов корпорации.
-        Доставь картридж любой ценой.
+        Доставь последний игровой картридж в аркадный клуб до полуночи.<br />
+        Следи за жёлтой стрелкой: она ведёт к следующей точке маршрута.
       </p>
       <div class="controls">
         <div><span class="key">WASD / Стрелки</span> — движение</div>
@@ -152,7 +146,7 @@
     let audioCtx = null;
     let engineOsc = null;
     let engineGain = null;
-    let currentRouteIndex = 0;
+    let recommendedRouteVisible = true;
 
     const player = {
       x: 160,
@@ -238,7 +232,7 @@
       player.boost = 100;
       player.score = 0;
       timeLeft = 105;
-      currentRouteIndex = 0;
+      recommendedRouteVisible = true;
       shake = 0;
       flash = 0;
       createWorldObjects();
@@ -253,14 +247,14 @@
         engineGain = audioCtx.createGain();
         engineOsc.type = 'sawtooth';
         engineOsc.frequency.value = 50;
-        engineGain.gain.value = 0.0035;
+        engineGain.gain.value = 0.006;
         engineOsc.connect(engineGain);
         engineGain.connect(audioCtx.destination);
         engineOsc.start();
       } catch (e) {}
     }
 
-    function beep(freq = 440, duration = 0.045, volume = 0.018, type = 'square') {
+    function beep(freq = 440, duration = 0.045, volume = 0.026, type = 'square') {
       if (!audioCtx) return;
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
@@ -326,15 +320,7 @@
     function distance(a, b, c, d) { return Math.hypot(a - c, b - d); }
 
     function getCurrentTarget() {
-      return routeBeacons[Math.min(currentRouteIndex, routeBeacons.length - 1)];
-    }
-
-    function updateRouteProgress() {
-      const target = getCurrentTarget();
-      if (distance(player.x, player.y, target.x, target.y) < 95 && currentRouteIndex < routeBeacons.length - 1) {
-        currentRouteIndex++;
-        beep(620, 0.035, 0.014, 'triangle');
-      }
+      return { x: destination.x + destination.w / 2, y: destination.y + destination.h / 2, label: 'CLUB' };
     }
 
     function update(dt) {
@@ -342,7 +328,7 @@
 
       if (engineOsc && engineGain) {
         engineOsc.frequency.value = 44 + Math.abs(player.speed) * 0.075;
-        engineGain.gain.value = 0.002 + Math.min(0.006, Math.abs(player.speed) / 90000);
+        engineGain.gain.value = 0.004 + Math.min(0.01, Math.abs(player.speed) / 76000);
       }
 
       timeLeft -= dt;
@@ -441,7 +427,6 @@
         }
       }
 
-      updateRouteProgress();
 
       if (rectsOverlap(carRect, destination)) {
         endGame(true, `Картридж доставлен. Итоговый счёт: ${Math.floor(player.score + timeLeft * 25 + player.hp * 10)}.`);
@@ -459,7 +444,7 @@
 
     function endGame(win, text) {
       state = win ? 'win' : 'lose';
-      if (engineGain) engineGain.gain.value = 0.0015;
+      if (engineGain) engineGain.gain.value = 0.0025;
       beep(win ? 880 : 110, 0.16, 0.018, win ? 'triangle' : 'sawtooth');
       result.classList.remove('hidden');
       resultTitle.textContent = win ? 'DELIVERED' : 'GAME OVER';
@@ -503,29 +488,31 @@
     }
 
     function drawRouteBeacons() {
+      if (!recommendedRouteVisible) return;
       ctx.save();
       ctx.lineWidth = 4;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.shadowColor = '#ffd166';
       ctx.shadowBlur = 10;
-      ctx.strokeStyle = 'rgba(255,209,102,0.75)';
+      ctx.strokeStyle = 'rgba(255,209,102,0.68)';
       ctx.setLineDash([18, 14]);
       ctx.beginPath();
-      ctx.moveTo(player.x, player.y);
-      for (let i = currentRouteIndex; i < routeBeacons.length; i++) ctx.lineTo(routeBeacons[i].x, routeBeacons[i].y);
+      ctx.moveTo(routeBeacons[0].x, routeBeacons[0].y);
+      for (let i = 1; i < routeBeacons.length; i++) ctx.lineTo(routeBeacons[i].x, routeBeacons[i].y);
       ctx.stroke();
       ctx.setLineDash([]);
 
       for (let i = 0; i < routeBeacons.length; i++) {
         const b = routeBeacons[i];
-        const isCurrent = i === currentRouteIndex;
-        const isPassed = i < currentRouteIndex;
-        ctx.shadowColor = isCurrent ? '#ffd166' : '#00f5ff';
-        ctx.shadowBlur = isCurrent ? 22 : 8;
-        ctx.fillStyle = isPassed ? 'rgba(60,255,126,0.45)' : isCurrent ? '#ffd166' : 'rgba(0,245,255,0.35)';
-        ctx.beginPath(); ctx.arc(b.x, b.y, isCurrent ? 18 : 11, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#080014'; ctx.font = 'bold 10px Courier New'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(isCurrent ? 'GO' : '', b.x, b.y + 1);
+        const dist = distance(player.x, player.y, b.x, b.y);
+        const isNear = dist < 130;
+        ctx.shadowColor = isNear ? '#ffd166' : '#00f5ff';
+        ctx.shadowBlur = isNear ? 18 : 8;
+        ctx.fillStyle = isNear ? '#ffd166' : 'rgba(0,245,255,0.32)';
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, isNear ? 15 : 10, 0, Math.PI * 2);
+        ctx.fill();
       }
       ctx.restore();
     }
@@ -596,7 +583,7 @@
       ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 18; ctx.fillStyle = '#ffd166';
       ctx.beginPath(); ctx.moveTo(38, 0); ctx.lineTo(-20, -18); ctx.lineTo(-8, 0); ctx.lineTo(-20, 18); ctx.closePath(); ctx.fill();
       ctx.restore();
-      ctx.save(); ctx.font = 'bold 14px Courier New'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffd166'; ctx.fillText(`${target.label} · ${Math.floor(Math.hypot(dx, dy))}m`, cx, cy + 42); ctx.restore();
+      ctx.save(); ctx.font = 'bold 14px Courier New'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffd166'; ctx.fillText(`CLUB · ${Math.floor(Math.hypot(dx, dy))}m`, cx, cy + 42); ctx.restore();
     }
 
     function drawHud() {
@@ -604,7 +591,7 @@
       ctx.save(); ctx.font = 'bold 20px Courier New'; ctx.textAlign = 'left'; ctx.fillStyle = '#00f5ff'; ctx.shadowColor = '#00f5ff'; ctx.shadowBlur = 10;
       ctx.fillText(`TIME ${Math.max(0, Math.ceil(timeLeft)).toString().padStart(3, '0')}`, 24, 36); ctx.fillText(`SCORE ${Math.floor(player.score)}`, 24, 66);
       drawBar(24, 88, 220, 16, player.hp / 100, '#ff2bd6', 'HP'); drawBar(24, 116, 220, 16, player.boost / 100, '#00f5ff', 'BOOST');
-      ctx.textAlign = 'right'; ctx.fillStyle = '#ffd166'; ctx.fillText('FOLLOW YELLOW ROUTE → ARCADE CLUB', window.innerWidth - 24, 36);
+      ctx.textAlign = 'right'; ctx.fillStyle = '#ffd166'; ctx.fillText('YELLOW LINE = RECOMMENDED ROUTE', window.innerWidth - 24, 36);
       ctx.restore();
     }
 
@@ -622,10 +609,10 @@
       ctx.strokeStyle = '#00f5ff'; ctx.lineWidth = 2; ctx.shadowColor = '#00f5ff'; ctx.shadowBlur = 8; ctx.strokeRect(x, y, mapW, mapH); ctx.shadowBlur = 0;
       ctx.fillStyle = 'rgba(255,43,214,0.42)'; for (const r of roads) ctx.fillRect(x + r.x * sx, y + r.y * sy, r.w * sx, r.h * sy);
       ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 2; ctx.beginPath();
-      for (let i = currentRouteIndex; i < routeBeacons.length; i++) {
+      ctx.moveTo(x + routeBeacons[0].x * sx, y + routeBeacons[0].y * sy);
+      for (let i = 1; i < routeBeacons.length; i++) {
         const bx = x + routeBeacons[i].x * sx;
         const by = y + routeBeacons[i].y * sy;
-        if (i === currentRouteIndex) ctx.moveTo(x + player.x * sx, y + player.y * sy);
         ctx.lineTo(bx, by);
       }
       ctx.stroke();
