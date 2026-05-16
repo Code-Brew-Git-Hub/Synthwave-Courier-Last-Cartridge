@@ -489,7 +489,16 @@
 
 
       if (rectsOverlap(carRect, destination)) {
-        endGame(true, `Картридж доставлен. Итоговый счёт: ${Math.floor(player.score + timeLeft * 25 + player.hp * 10)}.`);
+        const finalScore = Math.floor(player.score + timeLeft * 25 + player.hp * 10);
+        let rank = 'C';
+        if (finalScore > 5000) rank = 'B';
+        if (finalScore > 7000) rank = 'A';
+        if (finalScore > 10000) rank = 'S';
+
+        endGame(
+          true,
+          `Картридж доставлен. SCORE ${finalScore}. RANK ${rank}. ARCADE SCENE SAVED.`
+        );
       }
       if (player.hp <= 0) endGame(false, 'Машина уничтожена. Последний картридж потерян в неоновом шуме.');
 
