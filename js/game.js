@@ -72,7 +72,7 @@ const LEVELS = [
         name: 'TRAINING BLOCK',
         world: { width: 2800, height: 1900 },
         timeLimit: 190,
-        droneCount: 2,
+        droneCount: 1,
         bonusCount: 14,
         glitchCount: 5,
         buildingStepX: 230,
@@ -126,8 +126,8 @@ const LEVELS = [
         name: 'NEON CLOVERLEAF',
         world: { width: 3900, height: 2800 },
         timeLimit: 205,
-        droneCount: 10,
-        robotPlan: [{ type: 'scout', count: 2 }],
+        droneCount: 8,
+        robotPlan: [{ type: 'scout', count: 1 }],
         bonusCount: 26,
         glitchCount: 18,
         buildingStepX: 170,
@@ -200,8 +200,8 @@ const LEVELS = [
         name: 'MIDNIGHT CANALS',
         world: { width: 4800, height: 3400 },
         timeLimit: 245,
-        droneCount: 16,
-        robotPlan: [{ type: 'scout', count: 3 }, { type: 'turret', count: 2 }],
+        droneCount: 12,
+        robotPlan: [{ type: 'scout', count: 2 }, { type: 'turret', count: 1 }],
         bonusCount: 34,
         glitchCount: 32,
         buildingStepX: 178,
@@ -284,8 +284,8 @@ const LEVELS = [
         name: 'NEXACOM SCRAPYARD',
         world: { width: 4100, height: 3000 },
         timeLimit: 220,
-        droneCount: 14,
-        robotPlan: [{ type: 'scout', count: 4 }, { type: 'tank', count: 3 }, { type: 'turret', count: 3 }],
+        droneCount: 10,
+        robotPlan: [{ type: 'scout', count: 3 }, { type: 'tank', count: 2 }, { type: 'turret', count: 2 }],
         bonusCount: 20,
         glitchCount: 26,
         buildingStepX: 210,
@@ -350,8 +350,8 @@ const LEVELS = [
         name: 'PETYA · FINAL RUN',
         world: { width: 4300, height: 3100 },
         timeLimit: 310,
-        droneCount: 7,
-        robotPlan: [{ type: 'turret', count: 2 }, { type: 'scout', count: 2 }],
+        droneCount: 5,
+        robotPlan: [{ type: 'turret', count: 1 }, { type: 'scout', count: 2 }],
         bonusCount: 22,
         glitchCount: 28,
         buildingStepX: 200,
@@ -418,6 +418,311 @@ const LEVELS = [
             { x: 3340, y: 600, w: 104, h: 38 }
         ]
     }
+    ,
+    {
+        id: 6,
+        type: 'delivery',
+        name: 'SKYWAY SPIRAL',
+        world: { width: 5600, height: 3800 },
+        timeLimit: 310,
+        droneCount: 18,
+        robotPlan: [{ type: 'scout', count: 5 }, { type: 'turret', count: 3 }],
+        bonusCount: 38,
+        glitchCount: 34,
+        buildingStepX: 170,
+        buildingStepY: 145,
+        objective: 'DELIVER THROUGH THE ELEVATED SPIRAL',
+        tutorial: false,
+        start: { x: 260, y: 3500, angle: 0 },
+        dest: { x: 4960, y: 250, w: 260, h: 170 },
+        visualDistricts: [
+            { x: 80, y: 3260, w: 1050, h: 420, color: '#00f5ff', label: 'LOWER DEPOT' },
+            { x: 1260, y: 2320, w: 1650, h: 620, color: '#ffd166', label: 'SKYWAY LOOP' },
+            { x: 2960, y: 1420, w: 1500, h: 600, color: '#ff2bd6', label: 'DRONE BALCONY' },
+            { x: 4620, y: 110, w: 800, h: 420, color: '#ffd166', label: 'ROOFTOP CLUB' }
+        ],
+        landmarks: [
+            { x: 560, y: 3280, text: 'LOWER DEPOT', color: '#00f5ff' },
+            { x: 1900, y: 2260, text: 'SPIRAL RAMP', color: '#ffd166' },
+            { x: 3650, y: 1360, text: 'DRONE BALCONY', color: '#ff2bd6' },
+            { x: 5050, y: 205, text: 'ROOFTOP CLUB', color: '#ffd166' }
+        ],
+        roads: [
+            { x: 120, y: 3420, w: 1640, h: 250 },
+            { x: 1510, y: 2860, w: 250, h: 810 },
+            { x: 760, y: 2860, w: 1000, h: 230 },
+            { x: 760, y: 2240, w: 230, h: 850 },
+            { x: 760, y: 2240, w: 1860, h: 230 },
+            { x: 2390, y: 1780, w: 230, h: 690 },
+            { x: 1420, y: 1780, w: 1200, h: 230 },
+            { x: 1420, y: 1180, w: 230, h: 830 },
+            { x: 1420, y: 1180, w: 2100, h: 230 },
+            { x: 3290, y: 760, w: 230, h: 650 },
+            { x: 2400, y: 760, w: 1120, h: 230 },
+            { x: 2400, y: 360, w: 230, h: 630 },
+            { x: 2400, y: 360, w: 2820, h: 230 },
+            { x: 4990, y: 250, w: 230, h: 340 },
+            { x: 1900, y: 2600, w: 1180, h: 180 },
+            { x: 2900, y: 2140, w: 180, h: 640 },
+            { x: 2900, y: 2140, w: 1180, h: 180 },
+            { x: 3900, y: 1520, w: 180, h: 800 },
+            { x: 3900, y: 1520, w: 980, h: 180 },
+            { x: 4700, y: 540, w: 180, h: 1160 }
+        ],
+        route: [
+            { x: 330, y: 3545, label: '01' }, { x: 1635, y: 3545, label: '02' },
+            { x: 1635, y: 2975, label: '03' }, { x: 875, y: 2975, label: '04' },
+            { x: 875, y: 2355, label: '05' }, { x: 2505, y: 2355, label: '06' },
+            { x: 2505, y: 1895, label: '07' }, { x: 1535, y: 1895, label: '08' },
+            { x: 1535, y: 1295, label: '09' }, { x: 3405, y: 1295, label: '10' },
+            { x: 3405, y: 875, label: '11' }, { x: 2515, y: 875, label: '12' },
+            { x: 2515, y: 475, label: '13' }, { x: 5100, y: 475, label: 'CLUB' }
+        ],
+        barricades: [
+            { x: 1050, y: 3545, w: 118, h: 40 }, { x: 1635, y: 3240, w: 40, h: 118 },
+            { x: 875, y: 2680, w: 40, h: 118 }, { x: 1760, y: 2355, w: 118, h: 40 },
+            { x: 2505, y: 2070, w: 40, h: 118 }, { x: 1980, y: 1895, w: 118, h: 40 },
+            { x: 1535, y: 1580, w: 40, h: 118 }, { x: 2780, y: 1295, w: 118, h: 40 },
+            { x: 3405, y: 1060, w: 40, h: 118 }, { x: 2970, y: 875, w: 118, h: 40 }
+        ]
+    },
+    {
+        id: 7,
+        type: 'robot',
+        name: 'DATA GRAVEYARD',
+        world: { width: 6100, height: 4200 },
+        timeLimit: 340,
+        droneCount: 12,
+        robotPlan: [{ type: 'scout', count: 6 }, { type: 'tank', count: 4 }, { type: 'turret', count: 4 }],
+        bonusCount: 34,
+        glitchCount: 42,
+        buildingStepX: 190,
+        buildingStepY: 160,
+        objective: 'CLEAR THE DEAD SERVER MAZE',
+        tutorial: false,
+        hasShop: true,
+        start: { x: 300, y: 3880, angle: 0 },
+        dest: { x: 5360, y: 300, w: 270, h: 180 },
+        visualDistricts: [
+            { x: 110, y: 3600, w: 1050, h: 430, color: '#00f5ff', label: 'BOOT SECTOR' },
+            { x: 1280, y: 2440, w: 1600, h: 760, color: '#ff2bd6', label: 'ROBOT ARENA' },
+            { x: 3000, y: 1500, w: 1460, h: 720, color: '#ffd166', label: 'SERVER TOMBS' },
+            { x: 5000, y: 180, w: 900, h: 460, color: '#00f5ff', label: 'EXTRACT' }
+        ],
+        landmarks: [
+            { x: 560, y: 3630, text: 'BOOT SECTOR', color: '#00f5ff' },
+            { x: 1960, y: 2380, text: 'KILL GRID', color: '#ff2bd6' },
+            { x: 3700, y: 1450, text: 'SERVER TOMBS', color: '#ffd166' },
+            { x: 5480, y: 255, text: 'EXTRACT', color: '#00f5ff' }
+        ],
+        roads: [
+            { x: 150, y: 3740, w: 1780, h: 260 }, { x: 1670, y: 2940, w: 260, h: 1060 },
+            { x: 760, y: 2940, w: 2220, h: 240 }, { x: 760, y: 2260, w: 240, h: 920 },
+            { x: 760, y: 2260, w: 3100, h: 240 }, { x: 3620, y: 1620, w: 240, h: 880 },
+            { x: 1600, y: 1620, w: 2260, h: 240 }, { x: 1600, y: 940, w: 240, h: 920 },
+            { x: 1600, y: 940, w: 3500, h: 240 }, { x: 4860, y: 300, w: 240, h: 880 },
+            { x: 4860, y: 300, w: 880, h: 240 }, { x: 1220, y: 2540, w: 1380, h: 520 },
+            { x: 2920, y: 1820, w: 1200, h: 520 }, { x: 4200, y: 1160, w: 240, h: 900 },
+            { x: 4200, y: 1160, w: 1020, h: 220 }, { x: 520, y: 1480, w: 1320, h: 220 },
+            { x: 520, y: 1480, w: 220, h: 1740 }, { x: 2440, y: 700, w: 220, h: 1160 },
+            { x: 2440, y: 700, w: 1760, h: 220 }
+        ],
+        route: [
+            { x: 340, y: 3870, label: '01' }, { x: 1800, y: 3870, label: '02' },
+            { x: 1800, y: 3060, label: '03' }, { x: 880, y: 3060, label: '04' },
+            { x: 880, y: 2380, label: '05' }, { x: 3740, y: 2380, label: '06' },
+            { x: 3740, y: 1740, label: '07' }, { x: 1720, y: 1740, label: '08' },
+            { x: 1720, y: 1060, label: '09' }, { x: 4980, y: 1060, label: '10' },
+            { x: 4980, y: 420, label: 'EXTRACT' }
+        ],
+        barricades: [
+            { x: 980, y: 3870, w: 120, h: 42 }, { x: 1800, y: 3400, w: 42, h: 120 },
+            { x: 1260, y: 3060, w: 120, h: 42 }, { x: 880, y: 2660, w: 42, h: 120 },
+            { x: 2150, y: 2380, w: 120, h: 42 }, { x: 3740, y: 2040, w: 42, h: 120 },
+            { x: 2550, y: 1740, w: 120, h: 42 }, { x: 1720, y: 1360, w: 42, h: 120 },
+            { x: 3380, y: 1060, w: 120, h: 42 }, { x: 4980, y: 720, w: 42, h: 120 }
+        ]
+    },
+    {
+        id: 8,
+        type: 'delivery',
+        name: 'RAINLINE EXPRESS',
+        world: { width: 6600, height: 4300 },
+        timeLimit: 355,
+        droneCount: 24,
+        robotPlan: [{ type: 'scout', count: 7 }, { type: 'turret', count: 5 }],
+        bonusCount: 46,
+        glitchCount: 38,
+        buildingStepX: 165,
+        buildingStepY: 145,
+        objective: 'FAST HIGHWAY RUN WITH SIDE DETOURS',
+        tutorial: false,
+        start: { x: 250, y: 3880, angle: 0 },
+        dest: { x: 5920, y: 360, w: 280, h: 180 },
+        visualDistricts: [
+            { x: 90, y: 3640, w: 960, h: 430, color: '#00f5ff', label: 'RAINLINE START' },
+            { x: 1380, y: 3040, w: 1500, h: 440, color: '#ffd166', label: 'EXPRESS LANE' },
+            { x: 3000, y: 1940, w: 1600, h: 540, color: '#ff2bd6', label: 'DRONE NET' },
+            { x: 4740, y: 820, w: 1120, h: 520, color: '#ffd166', label: 'TOLL GATES' },
+            { x: 5700, y: 180, w: 780, h: 460, color: '#00f5ff', label: 'NORTH CLUB' }
+        ],
+        landmarks: [
+            { x: 520, y: 3650, text: 'RAINLINE START', color: '#00f5ff' },
+            { x: 2140, y: 2960, text: 'EXPRESS LANE', color: '#ffd166' },
+            { x: 3780, y: 1880, text: 'DRONE NET', color: '#ff2bd6' },
+            { x: 5300, y: 760, text: 'TOLL GATES', color: '#ffd166' },
+            { x: 6060, y: 300, text: 'NORTH CLUB', color: '#00f5ff' }
+        ],
+        roads: [
+            { x: 120, y: 3780, w: 6100, h: 250 }, { x: 5980, y: 360, w: 240, h: 3670 },
+            { x: 120, y: 3100, w: 5200, h: 220 }, { x: 120, y: 2450, w: 5200, h: 220 },
+            { x: 120, y: 1800, w: 5200, h: 220 }, { x: 120, y: 1150, w: 5200, h: 220 },
+            { x: 120, y: 500, w: 6100, h: 230 }, { x: 120, y: 500, w: 230, h: 3530 },
+            { x: 1420, y: 2450, w: 230, h: 1580 }, { x: 2620, y: 1150, w: 230, h: 2170 },
+            { x: 3820, y: 500, w: 230, h: 2170 }, { x: 5020, y: 500, w: 230, h: 2820 },
+            { x: 900, y: 3420, w: 880, h: 170 }, { x: 1780, y: 2780, w: 170, h: 810 },
+            { x: 1780, y: 2780, w: 1220, h: 170 }, { x: 3000, y: 2140, w: 170, h: 810 },
+            { x: 3000, y: 2140, w: 1220, h: 170 }, { x: 4220, y: 1500, w: 170, h: 810 },
+            { x: 4220, y: 1500, w: 1180, h: 170 }
+        ],
+        route: [
+            { x: 320, y: 3905, label: '01' }, { x: 1500, y: 3905, label: '02' },
+            { x: 1500, y: 3210, label: '03' }, { x: 2740, y: 3210, label: '04' },
+            { x: 2740, y: 2560, label: '05' }, { x: 3940, y: 2560, label: '06' },
+            { x: 3940, y: 1910, label: '07' }, { x: 5140, y: 1910, label: '08' },
+            { x: 5140, y: 1260, label: '09' }, { x: 6100, y: 1260, label: '10' },
+            { x: 6100, y: 460, label: 'CLUB' }
+        ],
+        barricades: [
+            { x: 1100, y: 3905, w: 120, h: 42 }, { x: 1500, y: 3500, w: 42, h: 120 },
+            { x: 2200, y: 3210, w: 120, h: 42 }, { x: 2740, y: 2880, w: 42, h: 120 },
+            { x: 3400, y: 2560, w: 120, h: 42 }, { x: 3940, y: 2240, w: 42, h: 120 },
+            { x: 4580, y: 1910, w: 120, h: 42 }, { x: 5140, y: 1580, w: 42, h: 120 },
+            { x: 5640, y: 1260, w: 120, h: 42 }, { x: 6100, y: 820, w: 42, h: 120 }
+        ]
+    },
+    {
+        id: 9,
+        type: 'robot',
+        name: 'GLITCH CITADEL',
+        world: { width: 7100, height: 4800 },
+        timeLimit: 380,
+        droneCount: 18,
+        robotPlan: [{ type: 'scout', count: 8 }, { type: 'tank', count: 6 }, { type: 'turret', count: 7 }],
+        bonusCount: 42,
+        glitchCount: 60,
+        buildingStepX: 185,
+        buildingStepY: 155,
+        objective: 'BREAK THE CITADEL DEFENSE GRID',
+        tutorial: false,
+        hasShop: true,
+        start: { x: 320, y: 4420, angle: 0 },
+        dest: { x: 6260, y: 360, w: 300, h: 190 },
+        visualDistricts: [
+            { x: 100, y: 4100, w: 1120, h: 470, color: '#00f5ff', label: 'CITADEL GATE' },
+            { x: 1500, y: 3140, w: 1700, h: 800, color: '#ff2bd6', label: 'ROBOT ARENA' },
+            { x: 3300, y: 2120, w: 1560, h: 780, color: '#ffd166', label: 'CORE BRIDGE' },
+            { x: 4900, y: 1040, w: 1420, h: 760, color: '#ff2bd6', label: 'GLITCH MARKET' },
+            { x: 6000, y: 190, w: 900, h: 520, color: '#00f5ff', label: 'EXTRACT' }
+        ],
+        landmarks: [
+            { x: 620, y: 4130, text: 'CITADEL GATE', color: '#00f5ff' },
+            { x: 2300, y: 3060, text: 'HEAVY ROBOTS', color: '#ff2bd6' },
+            { x: 4050, y: 2060, text: 'CORE BRIDGE', color: '#ffd166' },
+            { x: 5620, y: 980, text: 'GLITCH CITADEL', color: '#ff2bd6' },
+            { x: 6400, y: 300, text: 'EXTRACT', color: '#00f5ff' }
+        ],
+        roads: [
+            { x: 150, y: 4300, w: 2050, h: 270 }, { x: 1930, y: 3520, w: 270, h: 1050 },
+            { x: 820, y: 3520, w: 2980, h: 250 }, { x: 820, y: 2800, w: 250, h: 970 },
+            { x: 820, y: 2800, w: 4320, h: 250 }, { x: 4890, y: 2040, w: 250, h: 1010 },
+            { x: 1520, y: 2040, w: 3620, h: 250 }, { x: 1520, y: 1260, w: 250, h: 1030 },
+            { x: 1520, y: 1260, w: 4600, h: 250 }, { x: 5870, y: 360, w: 250, h: 1150 },
+            { x: 5870, y: 360, w: 900, h: 250 }, { x: 2260, y: 3140, w: 980, h: 560 },
+            { x: 3600, y: 2320, w: 1120, h: 560 }, { x: 5020, y: 1500, w: 980, h: 560 },
+            { x: 560, y: 1960, w: 1200, h: 220 }, { x: 560, y: 1960, w: 220, h: 1840 },
+            { x: 2600, y: 900, w: 220, h: 1600 }, { x: 2600, y: 900, w: 1800, h: 220 },
+            { x: 4400, y: 580, w: 220, h: 1540 }, { x: 4400, y: 580, w: 1500, h: 220 }
+        ],
+        route: [
+            { x: 360, y: 4435, label: '01' }, { x: 2060, y: 4435, label: '02' },
+            { x: 2060, y: 3645, label: '03' }, { x: 945, y: 3645, label: '04' },
+            { x: 945, y: 2925, label: '05' }, { x: 5015, y: 2925, label: '06' },
+            { x: 5015, y: 2165, label: '07' }, { x: 1645, y: 2165, label: '08' },
+            { x: 1645, y: 1385, label: '09' }, { x: 5995, y: 1385, label: '10' },
+            { x: 5995, y: 485, label: 'EXTRACT' }
+        ],
+        barricades: [
+            { x: 1160, y: 4435, w: 130, h: 44 }, { x: 2060, y: 4000, w: 44, h: 130 },
+            { x: 1480, y: 3645, w: 130, h: 44 }, { x: 945, y: 3250, w: 44, h: 130 },
+            { x: 2860, y: 2925, w: 130, h: 44 }, { x: 5015, y: 2540, w: 44, h: 130 },
+            { x: 3350, y: 2165, w: 130, h: 44 }, { x: 1645, y: 1760, w: 44, h: 130 },
+            { x: 3850, y: 1385, w: 130, h: 44 }, { x: 5995, y: 920, w: 44, h: 130 }
+        ]
+    },
+    {
+        id: 10,
+        type: 'boss',
+        name: 'NEXACOM CORE · LAST SIGNAL',
+        world: { width: 7600, height: 5200 },
+        timeLimit: 430,
+        droneCount: 20,
+        robotPlan: [{ type: 'scout', count: 8 }, { type: 'tank', count: 5 }, { type: 'turret', count: 8 }],
+        bonusCount: 48,
+        glitchCount: 64,
+        buildingStepX: 180,
+        buildingStepY: 150,
+        objective: 'DESTROY THE FINAL SIGNAL CORE',
+        tutorial: false,
+        hasBoss: true,
+        hasShop: true,
+        start: { x: 300, y: 4800, angle: 0 },
+        dest: { x: 6740, y: 360, w: 310, h: 200 },
+        visualDistricts: [
+            { x: 90, y: 4480, w: 1120, h: 500, color: '#00f5ff', label: 'FINAL GARAGE' },
+            { x: 1500, y: 3600, w: 1640, h: 620, color: '#ffd166', label: 'POWER RINGS' },
+            { x: 3260, y: 2480, w: 1650, h: 700, color: '#ff2bd6', label: 'PETYA APPROACH' },
+            { x: 5100, y: 1040, w: 1800, h: 900, color: '#ff2bd6', label: 'BOSS ARENA' },
+            { x: 6500, y: 180, w: 900, h: 520, color: '#00f5ff', label: 'ESCAPE ZONE' }
+        ],
+        landmarks: [
+            { x: 620, y: 4500, text: 'FINAL GARAGE', color: '#00f5ff' },
+            { x: 2300, y: 3520, text: 'POWER RINGS', color: '#ffd166' },
+            { x: 4080, y: 2420, text: 'PETYA OVERDRIVE', color: '#ff2bd6' },
+            { x: 6000, y: 990, text: 'FINAL BOSS ARENA', color: '#ff2bd6' },
+            { x: 6900, y: 290, text: 'LAST SIGNAL', color: '#00f5ff' }
+        ],
+        roads: [
+            { x: 140, y: 4700, w: 7040, h: 270 }, { x: 140, y: 3920, w: 270, h: 1050 },
+            { x: 140, y: 3920, w: 5600, h: 250 }, { x: 1550, y: 3140, w: 250, h: 1030 },
+            { x: 1550, y: 3140, w: 5000, h: 250 }, { x: 3330, y: 2360, w: 250, h: 1030 },
+            { x: 3330, y: 2360, w: 3660, h: 250 }, { x: 5170, y: 1580, w: 250, h: 1030 },
+            { x: 5170, y: 1580, w: 1900, h: 250 }, { x: 6700, y: 360, w: 270, h: 1470 },
+            { x: 5940, y: 360, w: 1030, h: 250 }, { x: 5100, y: 1040, w: 1800, h: 900 },
+            { x: 980, y: 3480, w: 1200, h: 210 }, { x: 2180, y: 2700, w: 210, h: 990 },
+            { x: 2180, y: 2700, w: 1400, h: 210 }, { x: 3580, y: 1920, w: 210, h: 990 },
+            { x: 3580, y: 1920, w: 1400, h: 210 }, { x: 4980, y: 1140, w: 210, h: 990 },
+            { x: 4980, y: 1140, w: 1000, h: 210 }, { x: 950, y: 2350, w: 1280, h: 220 },
+            { x: 950, y: 2350, w: 220, h: 1800 }, { x: 2680, y: 980, w: 220, h: 1800 },
+            { x: 2680, y: 980, w: 2480, h: 220 }
+        ],
+        route: [
+            { x: 360, y: 4835, label: '01' }, { x: 2750, y: 4835, label: '02' },
+            { x: 2750, y: 4045, label: '03' }, { x: 1680, y: 4045, label: '04' },
+            { x: 1680, y: 3265, label: '05' }, { x: 3460, y: 3265, label: '06' },
+            { x: 3460, y: 2485, label: '07' }, { x: 5300, y: 2485, label: '08' },
+            { x: 5300, y: 1705, label: '09' }, { x: 6000, y: 1490, label: 'ARENA' },
+            { x: 6860, y: 485, label: 'CORE' }
+        ],
+        barricades: [
+            { x: 1200, y: 4835, w: 130, h: 44 }, { x: 2750, y: 4420, w: 44, h: 130 },
+            { x: 2180, y: 4045, w: 130, h: 44 }, { x: 1680, y: 3640, w: 44, h: 130 },
+            { x: 2560, y: 3265, w: 130, h: 44 }, { x: 3460, y: 2860, w: 44, h: 130 },
+            { x: 4380, y: 2485, w: 130, h: 44 }, { x: 5300, y: 2080, w: 44, h: 130 },
+            { x: 6000, y: 1705, w: 130, h: 44 }, { x: 6860, y: 900, w: 44, h: 130 }
+        ]
+    }
+
 ];
 
 const RADIO_MESSAGES = {
@@ -1515,31 +1820,22 @@ function updateMissiles(dt) {
             missiles.splice(i, 1); continue;
         }
 
-        // Find target (boss first, then drones)
-        let tx = null, ty = null;
-        if (boss && !boss.dead) { tx = boss.x; ty = boss.y; }
-        else if (robots.length > 0) {
-            let best = null, bd = Infinity;
-            for (const r of robots) {
-                const dd = dist(m.x, m.y, r.x, r.y);
-                if (dd < bd) { bd = dd; best = r; }
-            }
-            if (best) { tx = best.x; ty = best.y; }
-        }
-        else if (drones.length > 0) {
-            let best = null, bd = Infinity;
-            for (const d of drones) {
-                const dd = dist(m.x, m.y, d.x, d.y);
-                if (dd < bd) { bd = dd; best = d; }
-            }
-            if (best) { tx = best.x; ty = best.y; }
-        }
+        // Find the nearest active enemy. Do not force boss priority: missiles should lock onto
+        // the closest real threat, otherwise they look broken when a robot/drone is closer.
+        let tx = null, ty = null, bestTargetDist = Infinity;
+        const considerTarget = (x, y) => {
+            const dd = dist(m.x, m.y, x, y);
+            if (dd < bestTargetDist) { bestTargetDist = dd; tx = x; ty = y; }
+        };
+        for (const r of robots) considerTarget(r.x, r.y);
+        for (const d of drones) considerTarget(d.x, d.y);
+        if (boss && !boss.dead) considerTarget(boss.x, boss.y);
 
         if (tx !== null) {
             const ta = Math.atan2(ty - m.y, tx - m.x);
             const da = ta - m.angle;
-            const wrapped = ((da + Math.PI) % (Math.PI*2)) - Math.PI;
-            m.angle += wrapped * 3 * dt;
+            const wrapped = Math.atan2(Math.sin(da), Math.cos(da));
+            m.angle += wrapped * Math.min(1, 7.5 * dt);
         }
         const speed = 380;
         m.vx = Math.cos(m.angle) * speed;
@@ -2992,35 +3288,96 @@ function drawRobots() {
         const stats = getRobotStats(r.type);
         ctx.save();
         ctx.translate(r.x, r.y);
-        const pulse = 0.75 + Math.sin(r.phase * 3) * 0.15;
-        ctx.shadowColor = stats.color; ctx.shadowBlur = r.type === 'tank' ? 24 : 18;
-        ctx.fillStyle = '#1a0028';
-        ctx.strokeStyle = stats.color;
-        ctx.lineWidth = r.type === 'tank' ? 4 : 3;
+        const aim = Math.atan2(player.y - r.y, player.x - r.x);
+        const pulse = 0.72 + Math.sin(r.phase * 3) * 0.18;
+        ctx.shadowColor = stats.color;
+        ctx.shadowBlur = r.type === 'tank' ? 28 : r.type === 'turret' ? 24 : 18;
+
         if (r.type === 'turret') {
-            ctx.beginPath(); ctx.arc(0, 0, r.w / 2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-            ctx.rotate(Math.atan2(player.y - r.y, player.x - r.x));
-            ctx.fillStyle = stats.color; ctx.fillRect(0, -5, 34, 10);
+            // TURRET: round fixed base + rotating long barrel + cyan radar ring
+            ctx.strokeStyle = `rgba(0,245,255,${0.25 + pulse * 0.25})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(0, 0, 38 + pulse * 6, 0, Math.PI * 2); ctx.stroke();
+            ctx.fillStyle = '#050016';
+            ctx.strokeStyle = '#00f5ff';
+            ctx.lineWidth = 4;
+            ctx.beginPath(); ctx.arc(0, 0, 27, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = 'rgba(0,245,255,0.16)';
+            ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.fill();
+            ctx.save();
+            ctx.rotate(aim);
+            ctx.fillStyle = '#00f5ff';
+            ctx.fillRect(0, -6, 46, 12);
+            ctx.fillStyle = '#ffd166';
+            ctx.fillRect(32, -4, 18, 8);
+            ctx.restore();
+            ctx.fillStyle = '#06000f';
+            ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI * 2); ctx.fill();
         } else if (r.type === 'tank') {
-            ctx.fillRect(-r.w/2, -r.h/2, r.w, r.h);
-            ctx.strokeRect(-r.w/2, -r.h/2, r.w, r.h);
-            ctx.fillStyle = '#06000f'; ctx.fillRect(-20, -16, 40, 14);
-            ctx.fillStyle = '#ffd166'; ctx.fillRect(-18, 8, 36, 12);
-            ctx.strokeStyle = `rgba(255,209,102,${pulse})`; ctx.beginPath(); ctx.arc(0, 0, 34, 0, Math.PI*2); ctx.stroke();
+            // TANK: heavy tracked square chassis, large cannon, yellow armor plates
+            ctx.rotate(aim);
+            ctx.fillStyle = '#050016';
+            ctx.strokeStyle = '#ffd166';
+            ctx.lineWidth = 5;
+            ctx.fillRect(-36, -30, 72, 60);
+            ctx.strokeRect(-36, -30, 72, 60);
+            ctx.fillStyle = 'rgba(255,209,102,0.28)';
+            ctx.fillRect(-31, -25, 18, 50);
+            ctx.fillRect(13, -25, 18, 50);
+            ctx.fillStyle = '#ffd166';
+            ctx.fillRect(-20, -18, 40, 12);
+            ctx.fillRect(-20, 6, 40, 12);
+            ctx.fillStyle = '#ff2bd6';
+            ctx.fillRect(2, -7, 48, 14);
+            ctx.fillStyle = '#06000f';
+            ctx.fillRect(-11, -9, 22, 18);
+            ctx.strokeStyle = `rgba(255,209,102,${0.45 + pulse * 0.3})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(0, 0, 43, 0, Math.PI * 2); ctx.stroke();
         } else {
-            ctx.fillRect(-r.w/2, -r.h/2, r.w, r.h);
-            ctx.strokeRect(-r.w/2, -r.h/2, r.w, r.h);
-            ctx.fillStyle = '#ffd166'; ctx.fillRect(-13, -10, 9, 8); ctx.fillRect(4, -10, 9, 8);
-            ctx.fillStyle = '#00f5ff'; ctx.fillRect(-16, 8, 32, 8);
-            ctx.strokeStyle = `rgba(255,209,102,${pulse})`; ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.moveTo(-22, 0); ctx.lineTo(-34, -14); ctx.moveTo(22, 0); ctx.lineTo(34, -14); ctx.stroke();
+            // SCOUT: light fast spider/bug silhouette, magenta body and long legs
+            ctx.rotate(aim);
+            ctx.strokeStyle = '#ff2bd6';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(-20, -18); ctx.lineTo(-38, -34);
+            ctx.moveTo(-18, 0);   ctx.lineTo(-42, 0);
+            ctx.moveTo(-20, 18);  ctx.lineTo(-38, 34);
+            ctx.moveTo(20, -18);  ctx.lineTo(38, -34);
+            ctx.moveTo(18, 0);    ctx.lineTo(42, 0);
+            ctx.moveTo(20, 18);   ctx.lineTo(38, 34);
+            ctx.stroke();
+            ctx.fillStyle = '#1a0028';
+            ctx.strokeStyle = '#ff2bd6';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(24, 0);
+            ctx.lineTo(8, -24);
+            ctx.lineTo(-24, -16);
+            ctx.lineTo(-24, 16);
+            ctx.lineTo(8, 24);
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#ffd166';
+            ctx.fillRect(2, -9, 9, 7);
+            ctx.fillRect(2, 2, 9, 7);
+            ctx.fillStyle = '#00f5ff';
+            ctx.fillRect(-18, -5, 17, 10);
         }
+
         const pct = r.hp / r.maxHp;
         ctx.shadowBlur = 0;
-        ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(-30, -40, 60, 6);
-        ctx.fillStyle = pct > 0.45 ? stats.color : '#ff6b6b'; ctx.fillRect(-30, -40, 60 * pct, 6);
-        ctx.fillStyle = '#fff'; ctx.font = 'bold 7px Courier New'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(r.type.toUpperCase(), 0, r.type === 'turret' ? 2 : -1);
+        ctx.fillStyle = 'rgba(0,0,0,0.70)';
+        ctx.fillRect(-34, -52, 68, 7);
+        ctx.fillStyle = pct > 0.45 ? stats.color : '#ff6b6b';
+        ctx.fillRect(-34, -52, 68 * pct, 7);
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-34, -52, 68, 7);
+        ctx.fillStyle = r.type === 'tank' ? '#ffd166' : r.type === 'turret' ? '#00f5ff' : '#ff2bd6';
+        ctx.font = 'bold 8px Courier New';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(r.type === 'tank' ? 'TANK' : r.type === 'turret' ? 'TURRET' : 'SCOUT', 0, 40);
         ctx.restore();
     }
 }
