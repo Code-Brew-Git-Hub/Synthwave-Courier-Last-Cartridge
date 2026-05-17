@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Synthwave Courier: Last Cartridge v0.3</title>
+  <title>Synthwave Courier: Last Cartridge v0.6 · Levels Tutorial Economy</title>
   <style>
     * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
     html, body {
@@ -95,6 +95,64 @@
     }
     .btn:hover { background: rgba(0,245,255,0.16); box-shadow: 0 0 30px rgba(0,245,255,0.8); }
     .hidden { display: none !important; }
+
+
+    /* ── V3 MERGED: COMBO + QUICK CONTROLS ── */
+    #comboDisplay {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 60;
+      font-size: clamp(32px, 6vw, 58px);
+      font-weight: 900;
+      letter-spacing: 3px;
+      opacity: 0;
+      transition: opacity 0.1s, transform 0.1s;
+      text-transform: uppercase;
+    }
+    #quick-controls {
+      position: fixed;
+      top: 78px; right: 24px;
+      z-index: 24;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      max-width: min(420px, calc(100vw - 48px));
+      pointer-events: auto;
+    }
+    .quick-btn {
+      border: 1px solid rgba(0,245,255,0.55);
+      background: rgba(4,0,12,0.72);
+      color: #00f5ff;
+      box-shadow: 0 0 14px rgba(0,245,255,0.25);
+      padding: 8px 10px;
+      font-family: "Courier New", monospace;
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+    }
+    .quick-btn:hover {
+      background: rgba(0,245,255,0.14);
+      box-shadow: 0 0 22px rgba(0,245,255,0.45);
+    }
+    .quick-btn.danger {
+      border-color: rgba(255,43,214,0.65);
+      color: #ff2bd6;
+      box-shadow: 0 0 14px rgba(255,43,214,0.25);
+    }
+    @media (max-width: 768px), (pointer: coarse) {
+      #quick-controls {
+        top: 72px;
+        left: 20px;
+        right: 20px;
+        justify-content: center;
+      }
+      .quick-btn { padding: 8px 9px; font-size: 10px; }
+    }
 
     /* ── CRT EFFECTS ── */
     #crt-overlay {
@@ -228,11 +286,61 @@
       padding-bottom: 4px;
     }
     .score-row span:last-child { color: #00f5ff; font-weight: bold; }
+
+
+    /* ── LEVEL / TUTORIAL UI ── */
+    #tutorial-box {
+      position: fixed;
+      left: 50%;
+      bottom: 28px;
+      transform: translateX(-50%);
+      z-index: 28;
+      width: min(620px, calc(100vw - 48px));
+      padding: 12px 16px;
+      border: 1px solid rgba(255,209,102,0.72);
+      background: rgba(4,0,12,0.86);
+      color: #ffd166;
+      box-shadow: 0 0 22px rgba(255,209,102,0.25);
+      font-size: clamp(12px, 1.6vw, 14px);
+      line-height: 1.5;
+      letter-spacing: 0.5px;
+      pointer-events: none;
+      backdrop-filter: blur(4px);
+    }
+    #tutorial-box strong { color: #00f5ff; }
+    #tutorial-box .hint { color: rgba(255,255,255,0.58); font-size: 11px; margin-top: 4px; }
+    #level-badge {
+      position: fixed;
+      left: 24px;
+      top: 138px;
+      z-index: 20;
+      pointer-events: none;
+      padding: 6px 10px;
+      border-left: 3px solid #00f5ff;
+      background: rgba(4,0,12,0.62);
+      color: #00f5ff;
+      font-size: 11px;
+      letter-spacing: 1px;
+      backdrop-filter: blur(4px);
+    }
+    .coin-row span:last-child { color: #ffd166 !important; }
   </style>
 </head>
 <body>
 <canvas id="game"></canvas>
 <div id="crt-overlay"></div>
+<div id="comboDisplay"></div>
+<div id="tutorial-box" class="hidden"></div>
+<div id="level-badge" class="hidden"></div>
+
+<!-- ── QUICK CONTROLS ── -->
+<div id="quick-controls" class="hidden">
+  <button id="pause-toggle" class="quick-btn" type="button">⏸ Пауза</button>
+  <button id="restart-button" class="quick-btn danger" type="button">↻ Рестарт</button>
+  <button id="map-toggle" class="quick-btn" type="button">▣ Карта: ON</button>
+  <button id="route-toggle" class="quick-btn" type="button">◇ Маршрут: ON</button>
+</div>
+
 
 <!-- ── RADIO LOG ── -->
 <div id="radio-log"></div>
@@ -263,7 +371,7 @@
 <!-- ── MENU ── -->
 <div id="menu" class="overlay">
   <div class="panel">
-    <div class="version-tag">▸ NEXACOM INTERCEPTED · 1987 ◂</div>
+    <div class="version-tag">▸ NEXACOM INTERCEPTED · LEVEL SYSTEM · 1987 ◂</div>
     <h1 class="title">Synthwave Courier</h1>
     <p style="font-size:13px;color:#ff2bd6;letter-spacing:3px;margin:0 0 18px">LAST CARTRIDGE</p>
     <p class="subtitle">
@@ -276,8 +384,10 @@
       <div><span class="k">A/D · ←→</span> — поворот</div>
       <div><span class="k">SHIFT</span> — нитро-ускорение</div>
       <div><span class="k">M</span> — миникарта вкл/выкл</div>
+      <div><span class="k">TAB</span> — маршрут вкл/выкл</div>
       <div><span class="k">R</span> — рестарт</div>
-      <div><span class="k">SPACE</span> — старт / продолжить</div>
+      <div><span class="k">SPACE</span> — старт / пауза / продолжить</div>
+      <div><span class="k">КНОПКИ</span> — карта / маршрут / пауза / рестарт</div>
     </div>
     <div style="margin-top:16px;padding:12px;border:1px solid rgba(0,245,255,0.25);background:rgba(0,245,255,0.04);font-size:12px;color:#7ae8f0;line-height:1.6">
       🟡 <strong style="color:#ffd166">B</strong> — нитро-заряд &nbsp;|&nbsp;
@@ -286,6 +396,7 @@
       ⚡ <strong style="color:#00f5ff">→</strong> — буст-пад
     </div>
     <button class="btn" onclick="startGame()">▶ НАЖМИ SPACE ДЛЯ СТАРТА</button>
+    <button class="btn" style="margin-left:10px;border-color:#ff2bd6;color:#ff2bd6;box-shadow:0 0 20px rgba(255,43,214,0.35)" onclick="resetProgress()">RESET PROGRESS</button>
   </div>
 </div>
 
@@ -302,6 +413,60 @@
 // ═══════════════════════════════════════════════════
 const WORLD = { width: 2400, height: 1600 };
 const TIME_LIMIT = 120;
+
+const LEVELS = [
+  {
+    id: 1,
+    type: 'tutorial',
+    name: 'TRAINING RUN',
+    world: { width: 1800, height: 1250 },
+    timeLimit: 180,
+    roadWidth: 190,
+    droneCount: 2,
+    glitchCount: 4,
+    bonusCount: 10,
+    buildingStep: 300,
+    objective: 'LEARN CONTROLS · DELIVER CARTRIDGE',
+    tutorial: true
+  },
+  {
+    id: 2,
+    type: 'delivery',
+    name: 'NEON DISTRICT',
+    world: { width: 2400, height: 1600 },
+    timeLimit: 130,
+    roadWidth: 190,
+    droneCount: 8,
+    glitchCount: 16,
+    bonusCount: 18,
+    buildingStep: 250,
+    objective: 'DELIVER CARTRIDGE',
+    tutorial: false
+  },
+  {
+    id: 3,
+    type: 'delivery',
+    name: 'DOWNTOWN GRID',
+    world: { width: 3200, height: 2200 },
+    timeLimit: 160,
+    roadWidth: 210,
+    droneCount: 13,
+    glitchCount: 25,
+    bonusCount: 24,
+    buildingStep: 230,
+    objective: 'DELIVER CARTRIDGE',
+    tutorial: false
+  }
+];
+
+let currentLevel = 1;
+let currentLevelConfig = LEVELS[0];
+let currentTimeLimit = TIME_LIMIT;
+let maxUnlockedLevel = 1;
+let coins = 0;
+let tutorialHidden = false;
+let tutorialFlags = { moved:false, turned:false, boosted:false, map:false, bonus:false, drone:false, glitch:false, finish:false };
+let levelCompletedOnce = false;
 
 const RADIO_MESSAGES = {
   start: [
@@ -530,6 +695,14 @@ const resultEl = document.getElementById('result');
 const resultPanel = document.getElementById('result-panel');
 const dangerBar = document.getElementById('danger-bar');
 const dangerSegs = document.querySelectorAll('.dseg');
+const comboDisplay = document.getElementById('comboDisplay');
+const quickControls = document.getElementById('quick-controls');
+const pauseToggleBtn = document.getElementById('pause-toggle');
+const restartButton = document.getElementById('restart-button');
+const mapToggleBtn = document.getElementById('map-toggle');
+const routeToggleBtn = document.getElementById('route-toggle');
+const tutorialBox = document.getElementById('tutorial-box');
+const levelBadge = document.getElementById('level-badge');
 
 const audio = new AudioEngine();
 const radio = new RadioSystem();
@@ -540,6 +713,12 @@ let lastTime = 0;
 // camera shake / flash
 let shake = 0, flash = 0, flashColor = 'rgba(255,43,214,';
 let minimapEnabled = true;
+let recommendedRouteVisible = true;
+let paused = false;
+let combo = 0;
+let comboTimer = 0;
+let comboMultiplier = 1;
+let comboShowTimer = 0;
 let dangerLevel = 0; // 0-5
 let nearFinishRadioDone = false;
 let offroadRadioCooldown = 0;
@@ -594,6 +773,7 @@ const routeBeacons = [
 let buildings = [], drones = [], bonuses = [], glitches = [];
 let neonSigns = [], roadLights = [], boostPads = [];
 let particles = [], carTrails = [], cityRainDrops = [];
+let floatingTexts = [];
 let timeLeft = TIME_LIMIT;
 let gameClock = 0;
 
@@ -647,6 +827,211 @@ function spawnPickup(x, y, color) {
   }
 }
 
+
+function addFloatingText(x, y, text, color = '#ffd166', size = 16) {
+  floatingTexts.push({ x, y, text, color, size, life: 1.0, vy: -58 });
+}
+
+function addCombo(basePoints = 0) {
+  combo++;
+  comboTimer = 4.5;
+  comboMultiplier = Math.min(4, 1 + Math.floor(combo / 3));
+  comboShowTimer = 1.0;
+  if (combo >= 2) {
+    const suffix = basePoints > 0 ? ` · +${basePoints}` : '';
+    addFloatingText(player.x, player.y - 52, `COMBO ×${comboMultiplier}${suffix}`, '#ff9900', 14);
+  }
+}
+
+function resetCombo() {
+  if (combo > 2) addFloatingText(player.x, player.y - 34, 'COMBO LOST', '#ff2bd6', 14);
+  combo = 0;
+  comboMultiplier = 1;
+  comboTimer = 0;
+  comboShowTimer = 0;
+}
+
+function updateComboDisplay() {
+  if (!comboDisplay) return;
+  if (comboShowTimer > 0 && combo >= 2) {
+    comboDisplay.style.opacity = Math.min(1, comboShowTimer * 3);
+    comboDisplay.textContent = `×${comboMultiplier} COMBO`;
+    const hue = (performance.now() / 1000 * 60) % 360;
+    comboDisplay.style.color = `hsl(${hue}, 100%, 60%)`;
+    comboDisplay.style.textShadow = `0 0 30px hsl(${hue}, 100%, 60%)`;
+    comboDisplay.style.transform = `translate(-50%, -50%) scale(${1 + (1 - comboShowTimer) * 0.35})`;
+  } else {
+    comboDisplay.style.opacity = 0;
+  }
+}
+
+function updateQuickControls() {
+  if (quickControls) quickControls.classList.toggle('hidden', state !== 'playing');
+  if (pauseToggleBtn) pauseToggleBtn.textContent = paused ? '▶ Продолжить' : '⏸ Пауза';
+  if (mapToggleBtn) mapToggleBtn.textContent = minimapEnabled ? '▣ Карта: ON' : '▣ Карта: OFF';
+  if (routeToggleBtn) routeToggleBtn.textContent = recommendedRouteVisible ? '◇ Маршрут: ON' : '◇ Маршрут: OFF';
+}
+
+function togglePause() {
+  if (state !== 'playing') return;
+  paused = !paused;
+  if (paused) audio.silence();
+  updateQuickControls();
+}
+
+function toggleMinimap() {
+  minimapEnabled = !minimapEnabled;
+  updateQuickControls();
+}
+
+function toggleRoute() {
+  recommendedRouteVisible = !recommendedRouteVisible;
+  updateQuickControls();
+}
+
+function restartGame() {
+  if (state !== 'menu') startGame();
+}
+
+
+// ── LEVEL / PROGRESS SYSTEM ───────────────────────
+function loadProgress() {
+  try {
+    const raw = localStorage.getItem('synthwaveCourierProgress');
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    maxUnlockedLevel = Math.max(1, Math.min(LEVELS.length, data.maxUnlockedLevel || 1));
+    coins = Math.max(0, data.coins || 0);
+    tutorialHidden = !!data.tutorialHidden;
+    currentLevel = Math.max(1, Math.min(maxUnlockedLevel, data.currentLevel || 1));
+  } catch(e) {}
+}
+
+function saveProgress() {
+  try {
+    localStorage.setItem('synthwaveCourierProgress', JSON.stringify({
+      maxUnlockedLevel,
+      coins,
+      tutorialHidden,
+      currentLevel
+    }));
+  } catch(e) {}
+}
+
+function resetProgress() {
+  try { localStorage.removeItem('synthwaveCourierProgress'); } catch(e) {}
+  currentLevel = 1;
+  maxUnlockedLevel = 1;
+  coins = 0;
+  tutorialHidden = false;
+  saveProgress();
+  if (state !== 'playing') {
+    radio.say('repair', 'good');
+  }
+}
+
+function getLevelConfig(levelId = currentLevel) {
+  return LEVELS.find(l => l.id === levelId) || LEVELS[0];
+}
+
+function applyLevelConfig(levelConfig) {
+  currentLevelConfig = levelConfig;
+  currentTimeLimit = levelConfig.timeLimit;
+  WORLD.width = levelConfig.world.width;
+  WORLD.height = levelConfig.world.height;
+
+  const rw = levelConfig.roadWidth;
+  const yBottom = WORLD.height - 260;
+  const yBottomCenter = yBottom + rw / 2;
+  const yMid1 = Math.round(WORLD.height * 0.70);
+  const yMid2 = Math.round(WORLD.height * 0.43);
+  const yTop = 180;
+  const x1 = Math.round(WORLD.width * 0.25);
+  const x2 = Math.round(WORLD.width * 0.45);
+  const x3 = Math.round(WORLD.width * 0.65);
+  const x4 = Math.round(WORLD.width * 0.82);
+
+  dest.x = WORLD.width - 260;
+  dest.y = 180;
+  dest.w = 170;
+  dest.h = 120;
+
+  roads.length = 0;
+  roads.push(
+    { x: 80, y: yBottom, w: WORLD.width - 220, h: rw },
+    { x: x1 - rw/2, y: 220, w: rw, h: WORLD.height - 360 },
+    { x: x2 - rw/2, y: 120, w: rw, h: WORLD.height - 260 },
+    { x: x3 - rw/2, y: 220, w: rw, h: WORLD.height - 360 },
+    { x: x4 - rw/2, y: 120, w: rw, h: WORLD.height - 260 },
+    { x: 240, y: yMid1 - rw/2, w: WORLD.width - 540, h: rw },
+    { x: 320, y: yMid2 - rw/2, w: WORLD.width - 620, h: rw },
+    { x: Math.max(520, x2 - 180), y: 120, w: WORLD.width - x2 - 40, h: rw }
+  );
+
+  routeBeacons.length = 0;
+  routeBeacons.push(
+    { x: x1, y: yBottomCenter, label: '01' },
+    { x: x1, y: yMid1, label: '02' },
+    { x: x2, y: yMid1, label: '03' },
+    { x: x2, y: yMid2, label: '04' },
+    { x: x3, y: yMid2, label: '05' },
+    { x: x3, y: yTop + rw/2, label: '06' },
+    { x: x4, y: yTop + rw/2, label: '07' },
+    { x: dest.x + dest.w / 2, y: dest.y + dest.h / 2, label: 'CLUB' }
+  );
+}
+
+function resetTutorialFlags() {
+  tutorialFlags = { moved:false, turned:false, boosted:false, map:false, bonus:false, drone:false, glitch:false, finish:false };
+}
+
+function setTutorialMessage(text) {
+  if (!tutorialBox) return;
+  if (!text || tutorialHidden || !currentLevelConfig.tutorial || state !== 'playing') {
+    tutorialBox.classList.add('hidden');
+    tutorialBox.innerHTML = '';
+    return;
+  }
+  tutorialBox.classList.remove('hidden');
+  tutorialBox.innerHTML = `${text}<div class="hint">H — скрыть обучение</div>`;
+}
+
+function updateTutorial() {
+  if (!currentLevelConfig.tutorial || tutorialHidden || state !== 'playing') {
+    setTutorialMessage('');
+    return;
+  }
+
+  const dToFinish = dist(player.x, player.y, dest.x + dest.w/2, dest.y + dest.h/2);
+  const nearBonus = bonuses.some(b => !b.taken && dist(player.x, player.y, b.x, b.y) < 170);
+  const nearDrone = drones.some(d => dist(player.x, player.y, d.x, d.y) < 260);
+  const nearGlitch = glitches.some(g => rectsOverlap(inflate(getPlayerRect(), 120), g));
+
+  if (!tutorialFlags.moved) return setTutorialMessage('<strong>W/S или ↑/↓</strong> — газ и тормоз. Разгонись до 80 км/ч.');
+  if (!tutorialFlags.turned) return setTutorialMessage('<strong>A/D или ←/→</strong> — поворот. Машина лучше входит в поворот на скорости.');
+  if (!tutorialFlags.boosted) return setTutorialMessage('<strong>SHIFT</strong> — нитро. Используй на прямой, а не перед стеной.');
+  if (!tutorialFlags.map) return setTutorialMessage('<strong>Мини-карта справа</strong> показывает дороги, дронов, цель и маршрут. Клавиша M скрывает карту.');
+  if (nearBonus && !tutorialFlags.bonus) return setTutorialMessage('<strong>Бонусы:</strong> B — нитро, + — ремонт, T — время. Собирай их на рискованных участках.');
+  if (nearDrone && !tutorialFlags.drone) return setTutorialMessage('<strong>Дроны NEXACOM</strong> преследуют машину и ломают броню. Не тормози рядом с ними.');
+  if (nearGlitch && !tutorialFlags.glitch) return setTutorialMessage('<strong>Glitch-зоны</strong> наносят урон и сбивают темп. Объезжай их.');
+  if (dToFinish < 420 && !tutorialFlags.finish) return setTutorialMessage('<strong>ARCADE CLUB рядом.</strong> Заезжай в светящуюся зону, чтобы завершить уровень.');
+  setTutorialMessage('<strong>Жёлтая линия</strong> — быстрый маршрут, но ехать можно любым путём. Доставь картридж.');
+}
+
+function completeLevel(totalScore) {
+  const earnedCoins = Math.max(1, Math.floor(totalScore / 100));
+  coins += earnedCoins;
+  if (currentLevel >= maxUnlockedLevel && currentLevel < LEVELS.length) maxUnlockedLevel = currentLevel + 1;
+  saveProgress();
+  return earnedCoins;
+}
+
+function startNextLevel() {
+  if (currentLevel < LEVELS.length) currentLevel++;
+  saveProgress();
+  startGame();
+}
+
 // ── WORLD GENERATION ─────────────────────────────
 function createWorld() {
   buildings.length = 0; drones.length = 0;
@@ -658,8 +1043,9 @@ function createWorld() {
   const blocked = [...roads, dest];
 
   // Buildings
-  for (let y = 80; y < WORLD.height - 80; y += 210) {
-    for (let x = 80; x < WORLD.width - 80; x += 260) {
+  const buildingStep = currentLevelConfig.buildingStep || 250;
+  for (let y = 80; y < WORLD.height - 80; y += buildingStep) {
+    for (let x = 80; x < WORLD.width - 80; x += buildingStep + 10) {
       const b = {
         x: x + Math.random()*40, y: y + Math.random()*40,
         w: 110 + Math.random()*80, h: 90 + Math.random()*80,
@@ -669,9 +1055,9 @@ function createWorld() {
     }
   }
 
-  // Drones — more aggressive, 12 of them
+  // Drones
   const droneRoads = roads.slice(2);
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < currentLevelConfig.droneCount; i++) {
     const road = droneRoads[i % droneRoads.length];
     drones.push({
       x: road.x + 40 + Math.random() * Math.max(10, road.w - 80),
@@ -685,7 +1071,7 @@ function createWorld() {
 
   // Bonuses
   const bonusTypes = ['boost','repair','time'];
-  for (let i = 0; i < 22; i++) {
+  for (let i = 0; i < currentLevelConfig.bonusCount; i++) {
     const road = pickFrom(roads);
     bonuses.push({
       x: road.x + 30 + Math.random() * Math.max(10, road.w-60),
@@ -696,7 +1082,7 @@ function createWorld() {
   }
 
   // Glitches (hazard zones)
-  for (let i = 0; i < 22; i++) {
+  for (let i = 0; i < currentLevelConfig.glitchCount; i++) {
     const road = pickFrom(roads);
     glitches.push({
       x: road.x + Math.random()*road.w, y: road.y + Math.random()*road.h,
@@ -705,17 +1091,20 @@ function createWorld() {
     });
   }
 
-  // Boost pads
-  const padDefs = [
-    { x: 360,  y: 1415, angle: 0 },
-    { x: 720,  y: 1110, angle: 0 },
-    { x: 1260, y: 690,  angle: 0 },
-    { x: 1565, y: 510,  angle: -Math.PI/2 },
-    { x: 1840, y: 190,  angle: 0 },
-    { x: 2070, y: 190,  angle: 0 },
-  ];
+  // Boost pads — placed on recommended route, but route is not mandatory
+  const padDefs = [];
+  for (let i = 0; i < routeBeacons.length - 1; i++) {
+    if (i % 2 !== 0) continue;
+    const a = routeBeacons[i];
+    const b = routeBeacons[i + 1];
+    padDefs.push({
+      x: (a.x + b.x) / 2,
+      y: (a.y + b.y) / 2,
+      angle: Math.atan2(b.y - a.y, b.x - a.x)
+    });
+  }
   for (const p of padDefs) {
-    boostPads.push({ x:p.x, y:p.y, w:72, h:34, angle:p.angle, pulse:Math.random()*Math.PI*2, cooldown:0 });
+    boostPads.push({ x:p.x, y:p.y, w:78, h:36, angle:p.angle, pulse:Math.random()*Math.PI*2, cooldown:0 });
   }
 
   // Neon signs on buildings
@@ -778,13 +1167,32 @@ resize();
 
 // ── INPUT ─────────────────────────────────────────
 window.addEventListener('keydown', e => {
-  keys.add(e.key.toLowerCase());
+  const key = e.key.toLowerCase();
+
   if (e.code === 'Space') {
+    e.preventDefault();
     if (state === 'menu') startGame();
     else if (state === 'win' || state === 'lose') startGame();
+    else if (state === 'playing') togglePause();
+    return;
   }
-  if (e.key.toLowerCase() === 'r') startGame();
-  if (e.key.toLowerCase() === 'm') minimapEnabled = !minimapEnabled;
+
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    if (state === 'playing') toggleRoute();
+    return;
+  }
+
+  if (key === 'h' && state === 'playing') {
+    tutorialHidden = !tutorialHidden;
+    saveProgress();
+    updateTutorial();
+    return;
+  }
+
+  keys.add(key);
+  if (key === 'r' && state !== 'menu') restartGame();
+  if (key === 'm' && state === 'playing') toggleMinimap();
 });
 window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
 
@@ -798,44 +1206,80 @@ const boostBtn = document.getElementById('boost-btn');
 boostBtn.addEventListener('touchstart', e => { e.preventDefault(); keys.add('shift'); boostBtn.classList.add('pressed'); }, { passive:false });
 boostBtn.addEventListener('touchend',   e => { e.preventDefault(); keys.delete('shift'); boostBtn.classList.remove('pressed'); }, { passive:false });
 
+if (pauseToggleBtn) pauseToggleBtn.addEventListener('click', togglePause);
+if (restartButton) restartButton.addEventListener('click', restartGame);
+if (mapToggleBtn) mapToggleBtn.addEventListener('click', toggleMinimap);
+if (routeToggleBtn) routeToggleBtn.addEventListener('click', toggleRoute);
+
 // ── GAME LIFECYCLE ────────────────────────────────
 function startGame() {
+  startLevel(currentLevel);
+}
+
+function startLevel(levelId) {
+  currentLevel = Math.max(1, Math.min(levelId, LEVELS.length));
+  const cfg = getLevelConfig(currentLevel);
+  applyLevelConfig(cfg);
+
   audio.init();
   state = 'playing';
+  paused = false;
   menuEl.classList.add('hidden');
   resultEl.classList.add('hidden');
   dangerBar.classList.remove('hidden');
+  if (quickControls) quickControls.classList.remove('hidden');
+  if (levelBadge) levelBadge.classList.remove('hidden');
   nearFinishRadioDone = false;
   lowHpRadioDone = false;
   lowTimeRadioDone = false;
   critTimeRadioDone = false;
   dangerLevel = 0;
+  recommendedRouteVisible = true;
+  combo = 0;
+  comboTimer = 0;
+  comboMultiplier = 1;
+  comboShowTimer = 0;
   gameClock = 0;
+  levelCompletedOnce = false;
+  resetTutorialFlags();
   Object.assign(player, {
     x:160, y:WORLD.height-180, angle:-Math.PI/2,
     speed:0, hp:100, boost:100, score:0, invincible:0,
   });
-  timeLeft = TIME_LIMIT;
+  timeLeft = currentTimeLimit;
   shake = 0; flash = 0;
+  floatingTexts.length = 0;
+  if (comboDisplay) comboDisplay.style.opacity = 0;
   createWorld();
+  updateQuickControls();
+  updateTutorial();
+  saveProgress();
   setTimeout(() => radio.say('start'), 800);
 }
 
 function endGame(win, scores = {}) {
   state = win ? 'win' : 'lose';
+  paused = false;
   audio.silence();
   if (win) audio.playWin(); else audio.playLose();
   dangerBar.classList.add('hidden');
+  if (quickControls) quickControls.classList.add('hidden');
+  if (levelBadge) levelBadge.classList.add('hidden');
+  setTutorialMessage('');
+  if (comboDisplay) comboDisplay.style.opacity = 0;
 
   if (win) {
     const { total, timeBonus, hpBonus, scoreBonus } = scores;
+    const earnedCoins = levelCompletedOnce ? 0 : completeLevel(total);
+    levelCompletedOnce = true;
     let rank = 'C';
     if (total > 4000) rank = 'B';
     if (total > 6500) rank = 'A';
     if (total > 9000) rank = 'S';
-    const rankColors = { S:'#ffd166', A:'#00f5ff', B:'#3cff7e', C:'#ff2bd6' };
+    const nextButtonText = currentLevel < LEVELS.length ? '▶ СЛЕДУЮЩИЙ УРОВЕНЬ' : '▶ ИГРАТЬ СНОВА';
+    const nextAction = currentLevel < LEVELS.length ? 'startNextLevel()' : 'startGame()';
     resultPanel.innerHTML = `
-      <div class="version-tag">▸ МИССИЯ ВЫПОЛНЕНА ◂</div>
+      <div class="version-tag">▸ МИССИЯ ВЫПОЛНЕНА · LEVEL ${currentLevel} ◂</div>
       <h1 class="title" style="color:#ffd166">DELIVERED</h1>
       <div class="win-rank">${rank}</div>
       <p class="subtitle" style="color:#3cff7e;margin:0 0 16px">Картридж доставлен. Аркадная сцена спасена.</p>
@@ -844,9 +1288,12 @@ function endGame(win, scores = {}) {
         <div class="score-row"><span>БОНУС БРОНИ</span><span>+${hpBonus}</span></div>
         <div class="score-row"><span>ОЧКИ МАРШРУТА</span><span>+${scoreBonus}</span></div>
         <div class="score-row" style="border-color:#ffd166;margin-top:8px"><span style="color:#ffd166;font-size:16px">ИТОГО</span><span style="color:#ffd166;font-size:16px">${total}</span></div>
+        <div class="score-row coin-row"><span>ПОЛУЧЕНО МОНЕТ</span><span>+${earnedCoins}</span></div>
+        <div class="score-row coin-row"><span>МОНЕТ ВСЕГО</span><span>${coins}</span></div>
       </div>
       <p style="color:#7ae8f0;font-size:12px;margin:0 0 16px">ARCADE SCENE SAVED · 1987</p>
-      <button class="btn" onclick="startGame()">▶ ИГРАТЬ СНОВА</button>
+      <button class="btn" onclick="${nextAction}">${nextButtonText}</button>
+      <button class="btn" style="margin-left:10px;border-color:#ff2bd6;color:#ff2bd6;box-shadow:0 0 20px rgba(255,43,214,0.35)" onclick="startLevel(currentLevel)">↻ ПОВТОРИТЬ</button>
     `;
   } else {
     resultPanel.innerHTML = `
@@ -865,6 +1312,11 @@ function endGame(win, scores = {}) {
 // ── UPDATE ────────────────────────────────────────
 function update(dt) {
   if (state !== 'playing') return;
+  if (paused) {
+    audio.silence();
+    updateComboDisplay();
+    return;
+  }
   gameClock += dt;
 
   // Time
@@ -884,6 +1336,11 @@ function update(dt) {
   const left = keys.has('a') || keys.has('arrowleft');
   const right= keys.has('d') || keys.has('arrowright');
   const boosting = keys.has('shift') && player.boost > 0 && player.speed > 60;
+
+  if (Math.abs(player.speed) > 80) tutorialFlags.moved = true;
+  if (left || right) tutorialFlags.turned = true;
+  if (boosting || keys.has('shift')) tutorialFlags.boosted = true;
+  if (gameClock > 5) tutorialFlags.map = true;
 
   const maxSpd = boosting ? player.boostMaxSpeed : player.maxSpeed;
   if (fwd)  player.speed += player.acceleration * dt;
@@ -926,6 +1383,7 @@ function update(dt) {
   if (!onRoad) {
     player.speed *= 0.87;
     player.hp -= 6 * dt;
+    resetCombo();
     offroadRadioCooldown -= dt;
     if (offroadRadioCooldown <= 0) {
       radio.say('offroad', 'danger');
@@ -942,6 +1400,7 @@ function update(dt) {
         player.hp -= 18 * dt;
         shake = Math.max(shake, 8);
         audio.beep(95, 0.04, 0.015, 'sawtooth');
+        resetCombo();
       }
     }
   }
@@ -950,11 +1409,13 @@ function update(dt) {
   for (const g of glitches) {
     g.phase += 0.09;
     if (rectsOverlap(pRect, g)) {
+      tutorialFlags.glitch = true;
       if (player.invincible <= 0) {
         player.hp -= g.damage * dt;
         flash = Math.max(flash, 0.06);
         flashColor = 'rgba(255,43,214,';
         player.speed *= 0.987;
+        resetCombo();
       }
     }
   }
@@ -968,6 +1429,7 @@ function update(dt) {
     const chaseRange = 350 + dangerLevel * 60;
 
     if (dDist < chaseRange) {
+      tutorialFlags.drone = true;
       d.alertLevel = 1;
       const chaseSpeed = 85 + dangerLevel * 20;
       d.vx += (dx / Math.max(1,dDist)) * chaseSpeed * dt;
@@ -1003,6 +1465,7 @@ function update(dt) {
       flash = Math.max(flash, 0.08);
       flashColor = 'rgba(255,43,214,';
       dangerLevel = Math.min(5, dangerLevel + dt * 0.4);
+      resetCombo();
       updateDangerUI();
       if (d.cooldown <= 0) {
         audio.beep(160, 0.04, 0.015, 'square');
@@ -1032,6 +1495,8 @@ function update(dt) {
       flashColor = 'rgba(0,245,255,';
       audio.beep(940, 0.06, 0.02, 'triangle');
       radio.say('boost_pad');
+      addCombo(50);
+      addFloatingText(player.x, player.y - 42, `BOOST ×${comboMultiplier}`, '#00f5ff', 15);
       spawnExplosion(player.x, player.y, '#00f5ff', 14);
     }
   }
@@ -1042,15 +1507,29 @@ function update(dt) {
     b.pulse += dt * 5;
     if (dist(player.x, player.y, b.x, b.y) < 38) {
       b.taken = true;
-      player.score += 150;
-      spawnPickup(b.x, b.y, b.type==='boost' ? '#00f5ff' : b.type==='repair' ? '#3cff7e' : '#ffd166');
+      const bonusColor = b.type==='boost' ? '#00f5ff' : b.type==='repair' ? '#3cff7e' : '#ffd166';
+      const activeMultiplier = comboMultiplier;
+      const bonusPoints = 150 * activeMultiplier;
+      player.score += bonusPoints;
+      addCombo(150);
+      addFloatingText(b.x, b.y - 30, `+${Math.floor(bonusPoints)} ×${activeMultiplier}`, bonusColor, 15);
+      spawnPickup(b.x, b.y, bonusColor);
+      tutorialFlags.bonus = true;
       if (b.type === 'boost')  { player.boost = 100; audio.beep(800, 0.05, 0.018, 'triangle'); radio.say('boost_bonus', 'good'); }
       if (b.type === 'repair') { player.hp = Math.min(100, player.hp+30); audio.beep(660, 0.06, 0.018, 'triangle'); radio.say('repair', 'good'); }
-      if (b.type === 'time')   { timeLeft = Math.min(TIME_LIMIT+15, timeLeft+10); audio.beep(520, 0.05, 0.016, 'triangle'); radio.say('time_bonus', 'good'); }
+      if (b.type === 'time')   { timeLeft = Math.min(currentTimeLimit+15, timeLeft+10); audio.beep(520, 0.05, 0.016, 'triangle'); radio.say('time_bonus', 'good'); }
       flash = Math.max(flash, 0.16);
       flashColor = b.type==='boost' ? 'rgba(0,245,255,' : b.type==='repair' ? 'rgba(60,255,126,' : 'rgba(255,209,102,';
     }
   }
+
+  // Combo timer
+  if (combo > 0) {
+    comboTimer -= dt;
+    if (comboTimer <= 0) resetCombo();
+  }
+  if (comboShowTimer > 0) comboShowTimer -= dt;
+  updateComboDisplay();
 
   // HP warnings
   if (!lowHpRadioDone && player.hp < 30) { radio.say('low_hp', 'danger'); lowHpRadioDone = true; }
@@ -1062,6 +1541,7 @@ function update(dt) {
 
   // Near finish
   const dToFinish = dist(player.x, player.y, dest.x+dest.w/2, dest.y+dest.h/2);
+  if (dToFinish < 500) tutorialFlags.finish = true;
   if (!nearFinishRadioDone && dToFinish < 500) {
     radio.say('near_finish', 'good');
     nearFinishRadioDone = true;
@@ -1104,6 +1584,14 @@ function update(dt) {
     if (carTrails[i].life <= 0) carTrails.splice(i, 1);
   }
 
+  // Floating texts
+  for (let i = floatingTexts.length-1; i >= 0; i--) {
+    const ft = floatingTexts[i];
+    ft.y += ft.vy * dt;
+    ft.life -= dt * 1.35;
+    if (ft.life <= 0) floatingTexts.splice(i, 1);
+  }
+
   // Rain
   for (let i = cityRainDrops.length-1; i >= 0; i--) {
     const r = cityRainDrops[i];
@@ -1111,6 +1599,9 @@ function update(dt) {
     if (r.life <= 0) cityRainDrops[i] = makeRainDrop();
   }
   while (cityRainDrops.length < 100) cityRainDrops.push(makeRainDrop());
+
+  // Tutorial
+  updateTutorial();
 
   // Audio
   audio.updateEngine(player.speed, boosting);
@@ -1147,6 +1638,7 @@ function draw() {
   drawCarTrails();
   drawPlayer();
   drawParticles();
+  drawFloatingTexts();
 
   ctx.restore();
 
@@ -1154,6 +1646,7 @@ function draw() {
   drawHUD();
   if (minimapEnabled) drawMinimap();
   drawVignette();
+  if (paused) drawPauseOverlay();
 
   // Flash overlay
   if (flash > 0.005) {
@@ -1253,6 +1746,7 @@ function drawRoadLights() {
 }
 
 function drawRouteBeacons() {
+  if (!recommendedRouteVisible) return;
   ctx.save();
   ctx.lineWidth = 4;
   ctx.lineCap = 'round';
@@ -1600,26 +2094,45 @@ function drawHUD() {
   ctx.fillStyle = '#00f5ff';
   ctx.shadowColor = '#00f5ff';
   ctx.fillText(`SCORE ${Math.floor(player.score)}`, 24, 64);
+  ctx.fillStyle = '#ffd166';
+  ctx.shadowColor = '#ffd166';
+  ctx.fillText(`COINS ${coins}`, 24, 92);
   ctx.shadowBlur = 0;
 
   // HP bar
-  drawBar(24, 84, 220, 16, player.hp/100,
+  drawBar(24, 112, 220, 16, player.hp/100,
     player.hp > 50 ? '#ff2bd6' : player.hp > 25 ? '#ffd166' : '#ff4444', 'HP');
   // Boost bar
-  drawBar(24, 108, 220, 16, player.boost/100, '#00f5ff', 'BOOST');
+  drawBar(24, 136, 220, 16, player.boost/100, '#00f5ff', 'BOOST');
+
+  // Combo indicator
+  if (combo >= 2) {
+    ctx.font = 'bold 14px Courier New';
+    ctx.fillStyle = '#ff9900';
+    ctx.shadowColor = '#ff9900';
+    ctx.shadowBlur = 10;
+    ctx.fillText(`COMBO ×${comboMultiplier}`, 24, 188);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(255,153,0,0.25)';
+    ctx.fillRect(24, 196, 120, 6);
+    ctx.fillStyle = '#ff9900';
+    ctx.fillRect(24, 196, 120 * clamp(comboTimer / 4.5, 0, 1), 6);
+  }
 
   // Speed indicator
   const spd = Math.floor(Math.abs(player.speed));
   ctx.font = 'bold 11px Courier New';
   ctx.fillStyle = 'rgba(0,245,255,0.7)';
   ctx.textAlign = 'left';
-  ctx.fillText(`${spd} km/h`, 24, 138);
+  ctx.fillText(`${spd} km/h`, 24, 166);
 
   // Corner hint
   ctx.textAlign = 'right';
   ctx.fillStyle = 'rgba(0,245,255,0.45)';
   ctx.font = '11px Courier New';
-  ctx.fillText('M=MAP  R=RESTART', W - 28, 36);
+  ctx.fillText(`LEVEL ${currentLevel} · ${currentLevelConfig.name} · ${currentLevelConfig.objective}`, W - 28, 36);
+  ctx.fillText(`TAB=ROUTE:${recommendedRouteVisible ? 'ON' : 'OFF'}  M=MAP:${minimapEnabled ? 'ON' : 'OFF'}  H=TUTORIAL  R=RESTART  SPACE=PAUSE`, W - 28, 56);
+  if (levelBadge) levelBadge.textContent = `LEVEL ${currentLevel} · ${currentLevelConfig.name} · COINS ${coins}`;
 
   ctx.restore();
 }
@@ -1673,12 +2186,14 @@ function drawMinimap() {
   for (const r of roads) ctx.fillRect(mx+r.x*sx, my+r.y*sy, r.w*sx, r.h*sy);
 
   // Route line
-  ctx.strokeStyle = '#ffd166';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(mx+routeBeacons[0].x*sx, my+routeBeacons[0].y*sy);
-  for (let i=1; i<routeBeacons.length; i++) ctx.lineTo(mx+routeBeacons[i].x*sx, my+routeBeacons[i].y*sy);
-  ctx.stroke();
+  if (recommendedRouteVisible) {
+    ctx.strokeStyle = '#ffd166';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(mx+routeBeacons[0].x*sx, my+routeBeacons[0].y*sy);
+    for (let i=1; i<routeBeacons.length; i++) ctx.lineTo(mx+routeBeacons[i].x*sx, my+routeBeacons[i].y*sy);
+    ctx.stroke();
+  }
 
   // Destination
   ctx.fillStyle = '#00f5ff';
@@ -1704,6 +2219,43 @@ function drawMinimap() {
   ctx.restore();
 }
 
+
+function drawFloatingTexts() {
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (const ft of floatingTexts) {
+    const alpha = clamp(ft.life, 0, 1);
+    ctx.globalAlpha = alpha;
+    ctx.font = `bold ${ft.size}px Courier New`;
+    ctx.fillStyle = ft.color;
+    ctx.shadowColor = ft.color;
+    ctx.shadowBlur = 12;
+    ctx.fillText(ft.text, ft.x, ft.y);
+  }
+  ctx.globalAlpha = 1;
+  ctx.shadowBlur = 0;
+  ctx.restore();
+}
+
+function drawPauseOverlay() {
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.52)';
+  ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = 'bold 48px Courier New';
+  ctx.fillStyle = '#00f5ff';
+  ctx.shadowColor = '#00f5ff';
+  ctx.shadowBlur = 30;
+  ctx.fillText('PAUSE', window.innerWidth / 2, window.innerHeight / 2);
+  ctx.font = '16px Courier New';
+  ctx.fillStyle = 'rgba(255,255,255,0.72)';
+  ctx.shadowBlur = 0;
+  ctx.fillText('SPACE или кнопка «Продолжить» — продолжить игру', window.innerWidth / 2, window.innerHeight / 2 + 48);
+  ctx.restore();
+}
+
 function drawVignette() {
   const W = window.innerWidth, H = window.innerHeight;
   const g = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.08, W/2, H/2, Math.max(W,H)*0.75);
@@ -1723,7 +2275,10 @@ function loop(ts) {
 }
 
 // Bootstrap
+loadProgress();
+applyLevelConfig(getLevelConfig(currentLevel));
 createWorld();
+updateQuickControls();
 requestAnimationFrame(loop);
 </script>
 </body>
