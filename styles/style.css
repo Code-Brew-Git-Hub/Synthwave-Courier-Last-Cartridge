@@ -436,3 +436,57 @@ html, body {
     font-size: 11px;
     letter-spacing: 1px;
 }
+
+.garage-status {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(120px, 1fr));
+    gap: 10px;
+    margin: 16px 0 8px;
+}
+.garage-status div {
+    border: 1px solid rgba(255,209,102,0.35);
+    background: rgba(255,209,102,0.045);
+    padding: 10px;
+    text-align: left;
+    box-shadow: inset 0 0 16px rgba(255,209,102,0.05);
+}
+.garage-status span {
+    display: block;
+    color: #c8b8f0;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    margin-bottom: 4px;
+}
+.garage-status strong {
+    display: block;
+    color: #ffd166;
+    font-size: 14px;
+    text-shadow: 0 0 10px rgba(255,209,102,0.55);
+}
+.garage-status small {
+    display: block;
+    color: rgba(0,245,255,0.72);
+    font-size: 9px;
+    margin-top: 4px;
+    line-height: 1.35;
+}
+.garage-service-row {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 8px 0 10px;
+}
+.service-btn {
+    color: #ffd166;
+    border-color: rgba(255,209,102,0.75);
+}
+.service-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+.shop-item.equipped .shop-item-name { color: #ffd166; }
+@media (max-width: 760px) {
+    .garage-status { grid-template-columns: repeat(2, 1fr); }
+}

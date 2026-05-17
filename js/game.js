@@ -127,6 +127,7 @@ const LEVELS = [
         world: { width: 3900, height: 2800 },
         timeLimit: 205,
         droneCount: 10,
+        robotPlan: [{ type: 'scout', count: 2 }],
         bonusCount: 26,
         glitchCount: 18,
         buildingStepX: 170,
@@ -200,6 +201,7 @@ const LEVELS = [
         world: { width: 4800, height: 3400 },
         timeLimit: 245,
         droneCount: 16,
+        robotPlan: [{ type: 'scout', count: 3 }, { type: 'turret', count: 2 }],
         bonusCount: 34,
         glitchCount: 32,
         buildingStepX: 178,
@@ -283,6 +285,7 @@ const LEVELS = [
         world: { width: 4100, height: 3000 },
         timeLimit: 220,
         droneCount: 14,
+        robotPlan: [{ type: 'scout', count: 4 }, { type: 'tank', count: 3 }, { type: 'turret', count: 3 }],
         bonusCount: 20,
         glitchCount: 26,
         buildingStepX: 210,
@@ -348,6 +351,7 @@ const LEVELS = [
         world: { width: 4300, height: 3100 },
         timeLimit: 310,
         droneCount: 7,
+        robotPlan: [{ type: 'turret', count: 2 }, { type: 'scout', count: 2 }],
         bonusCount: 22,
         glitchCount: 28,
         buildingStepX: 200,
@@ -454,6 +458,10 @@ const RADIO_MESSAGES = {
         "⚠ PETYA: ТЫ ЕЩЁ ЖИВОЙ?! СЕЙЧАС ИСПРАВИМ!",
         "⬡ ДИСПЕТЧЕР: Он разъярён! Максимальная угроза!",
     ],
+    boss_phase3: [
+        "⚠ PETYA: OVERDRIVE. АРЕНА ПЕРЕГРЕТА.",
+        "⬡ ДИСПЕТЧЕР: Финальная фаза! Держи дистанцию и стреляй!",
+    ],
     boss_hit: [
         "⬡ ДИСПЕТЧЕР: Попал! Продолжай!",
         "⚠ PETYA: ЖАЛКИЙ ВЫСТРЕЛ!",
@@ -464,6 +472,9 @@ const RADIO_MESSAGES = {
     ],
     boss_dead: [ "⬡ ДИСПЕТЧЕР: PETYA УНИЧТОЖЕН! Аркадная сцена спасена!!!" ],
     no_gun: [ "⬡ ДИСПЕТЧЕР: У тебя нет оружия! Купи пушку в магазине!" ],
+    garage_open: [ "⬡ GARAGE: Сервис открыт. Оружие, ремонт, нитро." ],
+    garage_repair: [ "⬡ GARAGE: Корпус восстановлен." ],
+    garage_refill: [ "⬡ GARAGE: Нитро заправлено." ],
 };
 
 // ═══════════════════════════════════════════════════
@@ -942,7 +953,7 @@ function updateQuickControls() {
 
 function getShopDrivePad() {
     if (!shopZone) return null;
-    return { x: shopZone.doorX - 120, y: shopZone.doorY - 120, w: 240, h: 240 };
+    return { x: shopZone.doorX - 170, y: shopZone.doorY - 170, w: 340, h: 340 };
 }
 
 function isPlayerAtShopEntrance() {
@@ -1133,6 +1144,9 @@ const shopOverlay = document.getElementById('shop-overlay');
 const shopCoinsDisplay = document.getElementById('shop-coins-display');
 const shopItemsContainer = document.getElementById('shop-items-container');
 const shopStartBtn = document.getElementById('shop-start-btn');
+const garageStatusEl = document.getElementById('garage-status');
+const repairBtnEl = document.getElementById('garage-repair-btn');
+const refillBtnEl = document.getElementById('garage-refill-btn');
 const fireBtnEl = document.getElementById('fire-btn');
 
 function openShop(mode = 'mission') {
@@ -1148,7 +1162,9 @@ function openShop(mode = 'mission') {
     escConfirmOpen = false;
     shopOverlay.classList.remove('hidden');
     if (shopStartBtn) shopStartBtn.textContent = mode === 'drive' ? '▶ ВЕРНУТЬСЯ В ИГРУ' : mode === 'menu' ? '◀ ГЛАВНОЕ МЕНЮ' : '▶ В БОЙ!';
+    radio.say('garage_open', 'good');
     renderShopItems();
+    updateGaragePanel();
 }
 
 function openGarageFromMenu() { openShop('menu'); }
@@ -1194,12 +1210,87 @@ function renderShopItems() {
     });
 }
 
+
+function getMaxHp() {
+    return playerWeapons.armor2 ? 200 : playerWeapons.armor ? 150 : 100;
+}
+
+function getBoostMax() {
+    return playerWeapons.nitro3 ? 300 : playerWeapons.nitro2 ? 200 : 100;
+}
+
+function getActiveWeaponName() {
+    if (activeWeapon === 'missile' && playerWeapons.missile) return 'РАКЕТНИЦА';
+    if (activeWeapon === 'shotgun' && playerWeapons.shotgun) return 'ДРОБОВИК';
+    if (activeWeapon === 'gun' && playerWeapons.gun) return 'ПУШКА';
+    return 'НЕТ ОРУЖИЯ';
+}
+
+function updateGaragePanel() {
+    if (!garageStatusEl) return;
+    const maxHp = getMaxHp();
+    const boostMax = getBoostMax();
+    const hpText = state === 'shop' && shopReturnState === 'drive' ? `${Math.ceil(player.hp)}/${maxHp}` : `старт: ${maxHp}`;
+    const boostText = state === 'shop' && shopReturnState === 'drive' ? `${Math.ceil(player.boost)}/${boostMax}` : `старт: ${boostMax}`;
+    const repairPrice = getRepairPrice();
+    const refillPrice = getRefillPrice();
+    garageStatusEl.innerHTML = `
+        <div><span>АКТИВНОЕ ОРУЖИЕ</span><strong>${getActiveWeaponName()}</strong><small>1 / 2 / 3 — быстрое переключение</small></div>
+        <div><span>БРОНЯ</span><strong>${hpText}</strong><small>Ремонт: ${repairPrice} монет</small></div>
+        <div><span>НИТРО</span><strong>${boostText}</strong><small>Заправка: ${refillPrice} монет</small></div>
+        <div><span>КОШЕЛЁК</span><strong>${coins}</strong><small>монет доступно</small></div>
+    `;
+    if (repairBtnEl) repairBtnEl.disabled = shopReturnState !== 'drive' || player.hp >= maxHp || coins < repairPrice;
+    if (refillBtnEl) refillBtnEl.disabled = shopReturnState !== 'drive' || player.boost >= boostMax || coins < refillPrice;
+}
+
+function getRepairPrice() {
+    const maxHp = getMaxHp();
+    const missing = Math.max(0, maxHp - player.hp);
+    return Math.max(5, Math.ceil(missing / 20) * 3);
+}
+
+function getRefillPrice() {
+    const boostMax = getBoostMax();
+    const missing = Math.max(0, boostMax - player.boost);
+    return Math.max(4, Math.ceil(missing / 40) * 2);
+}
+
+function repairInGarage() {
+    if (shopReturnState !== 'drive') return;
+    const maxHp = getMaxHp();
+    const price = getRepairPrice();
+    if (player.hp >= maxHp || coins < price) return;
+    coins -= price;
+    player.hp = maxHp;
+    saveProgress();
+    audio.beep(660, 0.08, 0.02, 'triangle');
+    radio.say('garage_repair', 'good');
+    renderShopItems();
+    updateGaragePanel();
+}
+
+function refillNitroInGarage() {
+    if (shopReturnState !== 'drive') return;
+    const boostMax = getBoostMax();
+    const price = getRefillPrice();
+    if (player.boost >= boostMax || coins < price) return;
+    coins -= price;
+    player.boost = boostMax;
+    saveProgress();
+    audio.beep(900, 0.08, 0.02, 'triangle');
+    radio.say('garage_refill', 'good');
+    renderShopItems();
+    updateGaragePanel();
+}
+
 function equipWeapon(id) {
     if (!WEAPON_IDS.includes(id) || !playerWeapons[id]) return;
     activeWeapon = id;
     saveProgress();
     audio.beep(740, 0.09, 0.02, 'triangle');
     renderShopItems();
+    updateGaragePanel();
 }
 function buyItem(id) {
     const item = SHOP_ITEMS.find(i => i.id === id);
@@ -1219,6 +1310,7 @@ function buyItem(id) {
     saveProgress();
     audio.beep(880, 0.12, 0.025, 'triangle');
     renderShopItems();
+    updateGaragePanel();
 }
 
 function goToMenu() {
@@ -1257,6 +1349,8 @@ function closeShop() {
 if (shopStartBtn) {
     shopStartBtn.addEventListener('click', closeShop);
 }
+if (repairBtnEl) repairBtnEl.addEventListener('click', repairInGarage);
+if (refillBtnEl) refillBtnEl.addEventListener('click', refillNitroInGarage);
 
 // ── BOSS SYSTEM ───────────────────────────────────
 function spawnBoss() {
@@ -1265,7 +1359,7 @@ function spawnBoss() {
         hp: BOSS_MAX_HP, maxHp: BOSS_MAX_HP,
         vx: 0, vy: 0, phase: 1, angle: 0,
         shootCooldown: 1.8, spawnCooldown: 8, dashCooldown: 3, alertPhase: 0,
-        phaseSwitched: false, dead: false, lowHpRadioDone: false, spawnedRadio: false,
+        phaseSwitched: false, phase3Switched: false, dead: false, lowHpRadioDone: false, spawnedRadio: false,
     };
     updateBossHUD();
     setTimeout(() => radio.say('boss_spawn', 'danger'), 400);
@@ -1284,40 +1378,42 @@ function updateBossHUD() {
     if (label) label.style.display = 'block';
     const pct = Math.max(0, (boss.hp / boss.maxHp) * 100);
     if (fill) fill.style.width = pct + '%';
-    if (fill) fill.style.background = boss.phase === 2
-        ? 'linear-gradient(90deg, #ff0000, #ff6b00)'
-        : 'linear-gradient(90deg, #ff2bd6, #ff6b6b)';
+    if (fill) fill.style.background = boss.phase === 3
+        ? 'linear-gradient(90deg, #ffd166, #ff2bd6)'
+        : boss.phase === 2
+            ? 'linear-gradient(90deg, #ff0000, #ff6b00)'
+            : 'linear-gradient(90deg, #ff2bd6, #ff6b6b)';
 }
 
 function updateBoss(dt) {
     if (!boss || boss.dead) return;
-    boss.alertPhase += dt * (boss.phase === 2 ? 4 : 2.5);
+    boss.alertPhase += dt * (boss.phase === 3 ? 6 : boss.phase === 2 ? 4 : 2.5);
     boss.shootCooldown -= dt;
     boss.dashCooldown -= dt;
     boss.spawnCooldown -= dt;
 
     const dx = player.x - boss.x, dy = player.y - boss.y;
-    const dDist = Math.hypot(dx, dy);
-    const chaseSpeed = boss.phase === 2 ? 200 : 110;
+    const dDist = Math.hypot(dx, dy) || 1;
+    const chaseSpeed = boss.phase === 3 ? 255 : boss.phase === 2 ? 190 : 110;
 
     if (dDist > 80) {
         boss.vx += (dx / dDist) * chaseSpeed * dt;
         boss.vy += (dy / dDist) * chaseSpeed * dt;
     } else {
-        boss.vx += Math.cos(boss.alertPhase) * 120 * dt;
-        boss.vy += Math.sin(boss.alertPhase) * 120 * dt;
+        boss.vx += Math.cos(boss.alertPhase) * 140 * dt;
+        boss.vy += Math.sin(boss.alertPhase) * 140 * dt;
     }
 
-    if (boss.phase === 2 && boss.dashCooldown <= 0 && dDist < 600) {
-        const spd = 480;
+    if (boss.phase >= 2 && boss.dashCooldown <= 0 && dDist < 700) {
+        const spd = boss.phase === 3 ? 620 : 480;
         boss.vx += (dx / dDist) * spd;
         boss.vy += (dy / dDist) * spd;
-        boss.dashCooldown = 2.2;
-        spawnExplosion(boss.x, boss.y, '#ff0000', 16);
+        boss.dashCooldown = boss.phase === 3 ? 1.55 : 2.25;
+        spawnExplosion(boss.x, boss.y, boss.phase === 3 ? '#ffd166' : '#ff0000', 16);
         audio.beep(80, 0.15, 0.025, 'sawtooth');
     }
 
-    const maxSpd = boss.phase === 2 ? 280 : 160;
+    const maxSpd = boss.phase === 3 ? 340 : boss.phase === 2 ? 270 : 160;
     const spd = Math.hypot(boss.vx, boss.vy);
     if (spd > maxSpd) { boss.vx = boss.vx/spd*maxSpd; boss.vy = boss.vy/spd*maxSpd; }
     boss.vx *= Math.pow(0.92, dt*60);
@@ -1329,29 +1425,35 @@ function updateBoss(dt) {
     boss.angle = Math.atan2(dy, dx);
 
     if (boss.shootCooldown <= 0) {
-        const numShots = boss.phase === 2 ? 5 : 3;
-        const spread = boss.phase === 2 ? 0.45 : 0.25;
+        const numShots = boss.phase === 3 ? 7 : boss.phase === 2 ? 5 : 3;
+        const spread = boss.phase === 3 ? 0.34 : boss.phase === 2 ? 0.45 : 0.25;
         const baseAngle = Math.atan2(dy, dx);
         for (let i = 0; i < numShots; i++) {
             const angle = baseAngle + (i - Math.floor(numShots/2)) * spread;
-            bossBullets.push({ x:boss.x, y:boss.y, vx:Math.cos(angle)*340, vy:Math.sin(angle)*340, life:2.5, r:9 });
+            bossBullets.push({ x:boss.x, y:boss.y, vx:Math.cos(angle)*(boss.phase === 3 ? 390 : 340), vy:Math.sin(angle)*(boss.phase === 3 ? 390 : 340), life:2.5, r: boss.phase === 3 ? 10 : 9 });
         }
-        boss.shootCooldown = boss.phase === 2 ? 0.9 : 1.6;
+        if (boss.phase === 3) {
+            for (let i = 0; i < 6; i++) {
+                const angle = boss.alertPhase + i * Math.PI / 3;
+                bossBullets.push({ x:boss.x, y:boss.y, vx:Math.cos(angle)*260, vy:Math.sin(angle)*260, life:2.0, r:7 });
+            }
+        }
+        boss.shootCooldown = boss.phase === 3 ? 0.62 : boss.phase === 2 ? 0.9 : 1.6;
         audio.beep(220, 0.08, 0.018, 'square');
     }
 
-    if (boss.phase === 2 && boss.spawnCooldown <= 0 && drones.length < 12) {
-        for (let i = 0; i < 2; i++) {
-            drones.push({
-                x: boss.x + (Math.random()-0.5)*180, y: boss.y + (Math.random()-0.5)*180,
-                r: 18, vx: 0, vy: 0, phase: Math.random()*Math.PI*2, cooldown: 1, alertLevel: 1,
-            });
+    if (boss.phase >= 2 && boss.spawnCooldown <= 0) {
+        if (boss.phase === 3 && robots.length < 5) {
+            const stats = getRobotStats('scout');
+            for (let i = 0; i < 2; i++) robots.push({ type:'scout', x: boss.x + (Math.random()-0.5)*220, y: boss.y + (Math.random()-0.5)*220, w:stats.w, h:stats.h, hp:stats.hp, maxHp:stats.hp, vx:0, vy:0, phase:Math.random()*Math.PI*2, shootCooldown:1, ramCooldown:0, score:stats.score, bulletDamage:stats.bulletDamage });
+        } else if (drones.length < 12) {
+            for (let i = 0; i < 2; i++) drones.push({ x: boss.x + (Math.random()-0.5)*180, y: boss.y + (Math.random()-0.5)*180, r: 18, vx: 0, vy: 0, phase: Math.random()*Math.PI*2, cooldown: 1, alertLevel: 1 });
         }
-        boss.spawnCooldown = 6;
-        radio.say('boss_phase2', 'danger');
+        boss.spawnCooldown = boss.phase === 3 ? 5 : 6;
+        radio.say(boss.phase === 3 ? 'boss_phase3' : 'boss_phase2', 'danger');
     }
 
-    if (!boss.phaseSwitched && boss.hp < boss.maxHp * 0.5) {
+    if (!boss.phaseSwitched && boss.hp < boss.maxHp * 0.65) {
         boss.phase = 2; boss.phaseSwitched = true;
         boss.shootCooldown = 0.2; boss.dashCooldown = 0;
         shake = Math.max(shake, 22); flash = 0.35; flashColor = 'rgba(255,0,0,';
@@ -1360,12 +1462,21 @@ function updateBoss(dt) {
         audio.beep(60, 0.4, 0.04, 'sawtooth');
     }
 
+    if (!boss.phase3Switched && boss.hp < boss.maxHp * 0.35) {
+        boss.phase = 3; boss.phase3Switched = true;
+        boss.shootCooldown = 0.1; boss.dashCooldown = 0; boss.spawnCooldown = 1.0;
+        shake = Math.max(shake, 30); flash = 0.55; flashColor = 'rgba(255,209,102,';
+        radio.say('boss_phase3', 'danger');
+        spawnExplosion(boss.x, boss.y, '#ffd166', 64);
+        audio.beep(48, 0.45, 0.05, 'sawtooth');
+    }
+
     if (!boss.lowHpRadioDone && boss.hp < boss.maxHp * 0.2) {
         boss.lowHpRadioDone = true; radio.say('boss_low_hp', 'danger');
     }
 
     if (dDist < boss.r + 28 && player.invincible <= 0) {
-        const dmg = (boss.phase === 2 ? 35 : 22) * (1 - player.damageReduction);
+        const dmg = (boss.phase === 3 ? 42 : boss.phase === 2 ? 35 : 22) * (1 - player.damageReduction);
         player.hp -= dmg * dt;
         shake = Math.max(shake, 16); flash = Math.max(flash, 0.18); flashColor = 'rgba(255,0,0,';
         player.invincible = 0.4; resetCombo();
@@ -1570,8 +1681,9 @@ function updatePlayerBullets(dt) {
                 if (r.hp <= 0) {
                     spawnExplosion(r.x, r.y, '#ff2bd6', 24);
                     robots.splice(ri, 1);
-                    player.score += 350 * comboMultiplier;
-                    addCombo(350);
+                    const pts = (r.score || 350);
+                    player.score += pts * comboMultiplier;
+                    addCombo(pts);
                     addFloatingText(r.x, r.y, '+350 ROBOT', '#ff2bd6', 15);
                 }
                 continue;
@@ -1700,15 +1812,26 @@ function buildGpsRoute() {
 
 function buildShopZone() {
     const s = currentLevelConfig.start;
-    let road = roads.find(r => s.x >= r.x && s.x <= r.x + r.w && s.y >= r.y && s.y <= r.y + r.h) || roads[0];
+    const road = roads.find(r => s.x >= r.x && s.x <= r.x + r.w && s.y >= r.y && s.y <= r.y + r.h) || roads[0];
     const horiz = road.w >= road.h;
-    const w = 190, h = 128;
-    let x = horiz ? clamp(s.x + 190, road.x + 80, road.x + road.w - 260) : road.x + road.w + 34;
-    let y = horiz ? road.y - h - 34 : clamp(s.y + 120, road.y + 70, road.y + road.h - 180);
-    if (y < 40) y = road.y + road.h + 34;
-    if (x + w > WORLD.width - 30) x = road.x - w - 34;
-    if (x < 30) x = road.x + road.w + 34;
-    shopZone = { x, y, w, h, doorX: horiz ? x + w / 2 : x, doorY: horiz ? road.y + 8 : y + h / 2, active: false, phase: 0 };
+    const w = 220, h = 146;
+    let x, y, doorX, doorY;
+    if (horiz) {
+        x = clamp(s.x + 160, road.x + 40, road.x + road.w - w - 40);
+        y = road.y - h - 42;
+        if (y < 30) y = road.y + road.h + 42;
+        doorX = x + w / 2;
+        doorY = y < road.y ? road.y + 12 : road.y + road.h - 12;
+    } else {
+        x = road.x + road.w + 42;
+        if (x + w > WORLD.width - 30) x = road.x - w - 42;
+        y = clamp(s.y + 110, road.y + 40, road.y + road.h - h - 40);
+        doorX = x < road.x ? road.x + 12 : road.x + road.w - 12;
+        doorY = y + h / 2;
+    }
+    x = clamp(x, 30, WORLD.width - w - 30);
+    y = clamp(y, 30, WORLD.height - h - 30);
+    shopZone = { x, y, w, h, doorX, doorY, active: false, phase: 0 };
 }
 
 function getBossArenaRect() {
@@ -1717,59 +1840,98 @@ function getBossArenaRect() {
     return zone ? { x: zone.x, y: zone.y, w: zone.w, h: zone.h } : { x: 2240, y: 140, w: 1780, h: 780 };
 }
 
+function getRobotStats(type) {
+    if (type === 'tank') return { w: 58, h: 58, hp: 260, speed: 70, chaseRange: 520, shootRange: 430, bulletSpeed: 230, bulletDamage: 24, score: 450, color: '#ffd166' };
+    if (type === 'turret') return { w: 50, h: 50, hp: 150, speed: 0, chaseRange: 0, shootRange: 620, bulletSpeed: 300, bulletDamage: 18, score: 320, color: '#00f5ff' };
+    return { w: 42, h: 42, hp: 95, speed: 155, chaseRange: 660, shootRange: 360, bulletSpeed: 250, bulletDamage: 14, score: 240, color: '#ff2bd6' };
+}
+
+function getRobotSpawnRoads() {
+    const area = (currentLevelConfig.visualDistricts || []).find(z => /ROBOT ARENA|DRONE NET|GLITCH MARKET|PETYA APPROACH|BOSS ARENA|FAST LANE/i.test(z.label));
+    let candidates = roads.filter(r => Math.max(r.w, r.h) > 350);
+    if (area) {
+        const inside = candidates.filter(r => rectsOverlap(r, area));
+        if (inside.length) candidates = inside;
+    }
+    return candidates.length ? candidates : roads;
+}
+
+
 function spawnRobots() {
     robots.length = 0;
-    if (!currentLevelConfig || currentLevelConfig.type !== 'robot') return;
-    const arena = (currentLevelConfig.visualDistricts || []).find(z => /ROBOT ARENA/i.test(z.label)) || { x: 1000, y: 1300, w: 1700, h: 900 };
-    const count = Math.max(7, Math.floor(currentLevelConfig.droneCount * 0.65));
-    for (let i = 0; i < count; i++) {
-        robots.push({
-            x: arena.x + 100 + Math.random() * Math.max(100, arena.w - 200),
-            y: arena.y + 100 + Math.random() * Math.max(100, arena.h - 200),
-            w: 46, h: 46, hp: 120, maxHp: 120,
-            vx: 0, vy: 0, phase: Math.random() * Math.PI * 2,
-            shootCooldown: 0.8 + Math.random() * 1.6,
-            ramCooldown: 0,
-        });
+    if (!currentLevelConfig || !Array.isArray(currentLevelConfig.robotPlan)) return;
+    const spawnRoads = getRobotSpawnRoads();
+    let serial = 0;
+    for (const group of currentLevelConfig.robotPlan) {
+        const stats = getRobotStats(group.type);
+        for (let i = 0; i < group.count; i++) {
+            const road = spawnRoads[serial % spawnRoads.length] || roads[(serial + 2) % roads.length];
+            const x = road.x + 55 + Math.random() * Math.max(40, road.w - 110);
+            const y = road.y + 55 + Math.random() * Math.max(40, road.h - 110);
+            robots.push({
+                type: group.type,
+                x, y,
+                w: stats.w, h: stats.h,
+                hp: stats.hp, maxHp: stats.hp,
+                vx: 0, vy: 0,
+                phase: Math.random() * Math.PI * 2,
+                shootCooldown: 0.8 + Math.random() * 1.8,
+                ramCooldown: 0,
+                score: stats.score,
+                bulletDamage: stats.bulletDamage,
+            });
+            serial++;
+        }
     }
 }
 
 function updateRobots(dt) {
     for (let i = robots.length - 1; i >= 0; i--) {
         const r = robots[i];
-        r.phase += dt * 2.5;
+        const stats = getRobotStats(r.type);
+        r.phase += dt * (r.type === 'turret' ? 1.2 : 2.8);
         r.shootCooldown -= dt;
         r.ramCooldown -= dt;
         const dx = player.x - r.x, dy = player.y - r.y;
         const d = Math.hypot(dx, dy) || 1;
-        const chase = d < 620;
-        const force = chase ? 115 : 35;
-        r.vx += (chase ? dx / d : Math.cos(r.phase)) * force * dt;
-        r.vy += (chase ? dy / d : Math.sin(r.phase * 0.8)) * force * dt;
-        const spd = Math.hypot(r.vx, r.vy);
-        const maxSpd = chase ? 135 : 70;
-        if (spd > maxSpd) { r.vx = r.vx / spd * maxSpd; r.vy = r.vy / spd * maxSpd; }
-        r.vx *= Math.pow(0.965, dt * 60);
-        r.vy *= Math.pow(0.965, dt * 60);
-        r.x += r.vx * dt; r.y += r.vy * dt;
-        const robotRect = { x: r.x - r.w/2, y: r.y - r.h/2, w: r.w, h: r.h };
-        if (!roads.some(rd => rectsOverlap(robotRect, rd))) { r.x -= r.vx * dt; r.y -= r.vy * dt; r.vx *= -0.5; r.vy *= -0.5; }
-        if (d < 46 && player.invincible <= 0 && r.ramCooldown <= 0) {
-            const dmg = 18 * (1 - player.damageReduction);
+        const chase = r.type !== 'turret' && d < stats.chaseRange;
+        if (r.type !== 'turret') {
+            const patrolX = Math.cos(r.phase * 0.55);
+            const patrolY = Math.sin(r.phase * 0.43);
+            const force = chase ? stats.speed : 34;
+            r.vx += (chase ? dx / d : patrolX) * force * dt;
+            r.vy += (chase ? dy / d : patrolY) * force * dt;
+            const spd = Math.hypot(r.vx, r.vy);
+            const maxSpd = chase ? stats.speed : Math.max(45, stats.speed * 0.45);
+            if (spd > maxSpd) { r.vx = r.vx / spd * maxSpd; r.vy = r.vy / spd * maxSpd; }
+            r.vx *= Math.pow(0.965, dt * 60);
+            r.vy *= Math.pow(0.965, dt * 60);
+            r.x += r.vx * dt; r.y += r.vy * dt;
+            const robotRect = { x: r.x - r.w/2, y: r.y - r.h/2, w: r.w, h: r.h };
+            if (!roads.some(rd => rectsOverlap(robotRect, rd))) { r.x -= r.vx * dt; r.y -= r.vy * dt; r.vx *= -0.55; r.vy *= -0.55; }
+        }
+        if (d < (r.type === 'tank' ? 58 : 42) && player.invincible <= 0 && r.ramCooldown <= 0) {
+            const dmg = (r.type === 'tank' ? 26 : 16) * (1 - player.damageReduction);
             player.hp -= dmg;
             player.invincible = 0.45;
             r.ramCooldown = 1.0;
             shake = Math.max(shake, 12); flash = Math.max(flash, 0.10); flashColor = 'rgba(255,43,214,';
-            spawnExplosion(player.x, player.y, '#ff2bd6', 10);
+            spawnExplosion(player.x, player.y, stats.color, 10);
         }
-        if (chase && d < 520 && r.shootCooldown <= 0) {
+        if (d < stats.shootRange && r.shootCooldown <= 0) {
             const a = Math.atan2(dy, dx);
-            robotBullets.push({ x: r.x, y: r.y, vx: Math.cos(a) * 260, vy: Math.sin(a) * 260, life: 2.2, r: 6 });
-            r.shootCooldown = 1.6 + Math.random() * 0.8;
-            audio.beep(200, 0.04, 0.012, 'square');
+            const shots = r.type === 'tank' ? 2 : 1;
+            const spread = r.type === 'tank' ? 0.18 : 0;
+            for (let k = 0; k < shots; k++) {
+                const aa = a + (k - (shots - 1) / 2) * spread;
+                robotBullets.push({ x: r.x, y: r.y, vx: Math.cos(aa) * stats.bulletSpeed, vy: Math.sin(aa) * stats.bulletSpeed, life: 2.4, r: r.type === 'tank' ? 8 : 6, damage: stats.bulletDamage, color: stats.color });
+            }
+            r.shootCooldown = r.type === 'turret' ? 1.25 : r.type === 'tank' ? 1.9 : 1.55;
+            audio.beep(r.type === 'tank' ? 140 : 220, 0.04, 0.012, 'square');
         }
     }
 }
+
 
 function updateRobotBullets(dt) {
     for (let i = robotBullets.length - 1; i >= 0; i--) {
@@ -1777,7 +1939,7 @@ function updateRobotBullets(dt) {
         b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
         if (b.life <= 0 || b.x < 0 || b.y < 0 || b.x > WORLD.width || b.y > WORLD.height) { robotBullets.splice(i, 1); continue; }
         if (dist(b.x, b.y, player.x, player.y) < b.r + 22 && player.invincible <= 0) {
-            player.hp -= 16 * (1 - player.damageReduction);
+            player.hp -= (b.damage || 16) * (1 - player.damageReduction);
             player.invincible = 0.45;
             shake = Math.max(shake, 10); flash = Math.max(flash, 0.10); flashColor = 'rgba(255,43,214,';
             robotBullets.splice(i, 1);
@@ -2047,7 +2209,7 @@ function startGameActual() {
     updateTutorial();
     saveProgress();
 
-    const combatLevel = currentLevelConfig.hasBoss || currentLevelConfig.type === 'robot';
+    const combatLevel = currentLevelConfig.hasBoss || currentLevelConfig.type === 'robot' || (currentLevelConfig.robotPlan && currentLevelConfig.robotPlan.length > 0);
     if (currentLevelConfig.hasBoss) {
         document.getElementById('boss-hp-bar').style.display = 'none';
         document.getElementById('boss-name-label').style.display = 'none';
@@ -2401,7 +2563,7 @@ function update(dt) {
         }
     }
 
-    if (currentLevelConfig && (currentLevelConfig.hasBoss || currentLevelConfig.type === 'robot')) {
+    if (currentLevelConfig && (currentLevelConfig.hasBoss || currentLevelConfig.type === 'robot' || (currentLevelConfig.robotPlan && currentLevelConfig.robotPlan.length > 0))) {
         updatePlayerBullets(dt);
         updateBossBullets(dt);
         updateRobotBullets(dt);
@@ -2827,27 +2989,38 @@ function drawDrones() {
 
 function drawRobots() {
     for (const r of robots) {
+        const stats = getRobotStats(r.type);
         ctx.save();
         ctx.translate(r.x, r.y);
         const pulse = 0.75 + Math.sin(r.phase * 3) * 0.15;
-        ctx.shadowColor = '#ff2bd6'; ctx.shadowBlur = 18;
+        ctx.shadowColor = stats.color; ctx.shadowBlur = r.type === 'tank' ? 24 : 18;
         ctx.fillStyle = '#1a0028';
-        ctx.strokeStyle = '#ff2bd6';
-        ctx.lineWidth = 3;
-        ctx.fillRect(-r.w/2, -r.h/2, r.w, r.h);
-        ctx.strokeRect(-r.w/2, -r.h/2, r.w, r.h);
-        ctx.fillStyle = '#ffd166';
-        ctx.fillRect(-13, -10, 9, 8);
-        ctx.fillRect(4, -10, 9, 8);
-        ctx.fillStyle = '#00f5ff';
-        ctx.fillRect(-16, 8, 32, 8);
-        ctx.strokeStyle = `rgba(255,209,102,${pulse})`;
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(-26, 0); ctx.lineTo(-38, -14); ctx.moveTo(26, 0); ctx.lineTo(38, -14); ctx.stroke();
+        ctx.strokeStyle = stats.color;
+        ctx.lineWidth = r.type === 'tank' ? 4 : 3;
+        if (r.type === 'turret') {
+            ctx.beginPath(); ctx.arc(0, 0, r.w / 2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            ctx.rotate(Math.atan2(player.y - r.y, player.x - r.x));
+            ctx.fillStyle = stats.color; ctx.fillRect(0, -5, 34, 10);
+        } else if (r.type === 'tank') {
+            ctx.fillRect(-r.w/2, -r.h/2, r.w, r.h);
+            ctx.strokeRect(-r.w/2, -r.h/2, r.w, r.h);
+            ctx.fillStyle = '#06000f'; ctx.fillRect(-20, -16, 40, 14);
+            ctx.fillStyle = '#ffd166'; ctx.fillRect(-18, 8, 36, 12);
+            ctx.strokeStyle = `rgba(255,209,102,${pulse})`; ctx.beginPath(); ctx.arc(0, 0, 34, 0, Math.PI*2); ctx.stroke();
+        } else {
+            ctx.fillRect(-r.w/2, -r.h/2, r.w, r.h);
+            ctx.strokeRect(-r.w/2, -r.h/2, r.w, r.h);
+            ctx.fillStyle = '#ffd166'; ctx.fillRect(-13, -10, 9, 8); ctx.fillRect(4, -10, 9, 8);
+            ctx.fillStyle = '#00f5ff'; ctx.fillRect(-16, 8, 32, 8);
+            ctx.strokeStyle = `rgba(255,209,102,${pulse})`; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(-22, 0); ctx.lineTo(-34, -14); ctx.moveTo(22, 0); ctx.lineTo(34, -14); ctx.stroke();
+        }
         const pct = r.hp / r.maxHp;
         ctx.shadowBlur = 0;
-        ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(-28, -36, 56, 6);
-        ctx.fillStyle = pct > 0.45 ? '#ff2bd6' : '#ff6b6b'; ctx.fillRect(-28, -36, 56 * pct, 6);
+        ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(-30, -40, 60, 6);
+        ctx.fillStyle = pct > 0.45 ? stats.color : '#ff6b6b'; ctx.fillRect(-30, -40, 60 * pct, 6);
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 7px Courier New'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(r.type.toUpperCase(), 0, r.type === 'turret' ? 2 : -1);
         ctx.restore();
     }
 }
@@ -2855,7 +3028,8 @@ function drawRobots() {
 function drawRobotBullets() {
     ctx.save();
     for (const b of robotBullets) {
-        ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 14; ctx.fillStyle = '#ffd166';
+        const c = b.color || '#ffd166';
+        ctx.shadowColor = c; ctx.shadowBlur = 14; ctx.fillStyle = c;
         ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
     }
     ctx.restore();
@@ -2968,8 +3142,8 @@ function drawBoss() {
     ctx.translate(boss.x, boss.y);
     const t = performance.now() / 1000;
     const pulse = 0.7 + Math.sin(t * (boss.phase === 2 ? 6 : 3)) * 0.3;
-    const bossColor = boss.phase === 2 ? '#ff0000' : '#ff2bd6';
-    const bossColor2 = boss.phase === 2 ? '#ff6b00' : '#ff6b6b';
+    const bossColor = boss.phase === 3 ? '#ffd166' : boss.phase === 2 ? '#ff0000' : '#ff2bd6';
+    const bossColor2 = boss.phase === 3 ? '#ff2bd6' : boss.phase === 2 ? '#ff6b00' : '#ff6b6b';
     ctx.rotate(t * (boss.phase === 2 ? 2.5 : 1));
     ctx.strokeStyle = bossColor; ctx.lineWidth = 4;
     ctx.shadowColor = bossColor; ctx.shadowBlur = 28;
@@ -2994,12 +3168,12 @@ function drawBoss() {
     ctx.fillStyle = '#fff'; ctx.font = 'bold 10px Courier New';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('PETYA', 0, 0);
-    if (boss.phase === 2) { ctx.fillStyle = '#ff0000'; ctx.font = 'bold 7px Courier New'; ctx.fillText('PHASE II', 0, 12); }
+    if (boss.phase >= 2) { ctx.fillStyle = boss.phase === 3 ? '#ffd166' : '#ff0000'; ctx.font = 'bold 7px Courier New'; ctx.fillText(boss.phase === 3 ? 'OVERDRIVE' : 'PHASE II', 0, 12); }
     ctx.restore();
     const barW = 100, pct = boss.hp / boss.maxHp;
     ctx.save();
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(boss.x-barW/2, boss.y-boss.r-22, barW, 10);
-    ctx.fillStyle = boss.phase===2 ? '#ff0000' : '#ff2bd6';
+    ctx.fillStyle = boss.phase===3 ? '#ffd166' : boss.phase===2 ? '#ff0000' : '#ff2bd6';
     ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 8;
     ctx.fillRect(boss.x-barW/2, boss.y-boss.r-22, barW*pct, 10);
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.strokeRect(boss.x-barW/2, boss.y-boss.r-22, barW, 10);
@@ -3016,10 +3190,31 @@ function drawParticles() {
     ctx.globalAlpha = 1; ctx.shadowBlur = 0; ctx.restore();
 }
 
+function getNavigationTarget() {
+    if (currentLevelConfig && currentLevelConfig.type === 'robot' && robots.length > 0) {
+        let best = robots[0], bd = Infinity;
+        for (const r of robots) { const d = dist(player.x, player.y, r.x, r.y); if (d < bd) { bd = d; best = r; } }
+        return { x: best.x, y: best.y, label: `ROBOT · ${robots.length}` };
+    }
+    if (boss && !boss.dead) return { x: boss.x, y: boss.y, label: `PETYA · ${Math.ceil(boss.hp)}` };
+    const pts = gpsRoutePoints.length > 1 ? gpsRoutePoints : routeBeacons;
+    if (pts.length > 1) {
+        let bestIdx = 0, bestDist = Infinity;
+        for (let i = 0; i < pts.length; i++) {
+            const d = dist(player.x, player.y, pts[i].x, pts[i].y);
+            if (d < bestDist) { bestDist = d; bestIdx = i; }
+        }
+        const targetIdx = Math.min(pts.length - 1, bestIdx + (bestDist < 150 ? 1 : 0));
+        const target = pts[targetIdx];
+        return { x: target.x, y: target.y, label: target.label ? `GPS · ${target.label}` : 'GPS' };
+    }
+    return { x: dest.x + dest.w/2, y: dest.y + dest.h/2, label: 'CLUB' };
+}
+
 function drawDirectionArrow() {
     if (state !== 'playing') return;
-    const tx = dest.x + dest.w/2, ty = dest.y + dest.h/2;
-    const dx = tx - player.x, dy = ty - player.y;
+    const target = getNavigationTarget();
+    const dx = target.x - player.x, dy = target.y - player.y;
     const angle = Math.atan2(dy, dx);
     const dMeters = Math.floor(Math.hypot(dx, dy));
     const cx = window.innerWidth/2, cy = 76;
@@ -3031,8 +3226,9 @@ function drawDirectionArrow() {
     ctx.save();
     ctx.font = 'bold 13px Courier New'; ctx.textAlign = 'center';
     ctx.fillStyle = '#ffd166'; ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 10;
-    const targetLabel = currentLevelConfig && currentLevelConfig.type === 'robot' ? `ROBOTS · ${robots.length}` : `CLUB · ${dMeters}m`;
-    ctx.fillText(targetLabel, cx, cy + 38);
+    ctx.fillText(`${target.label} · ${dMeters}m`, cx, cy + 38);
+    ctx.font = '10px Courier New'; ctx.fillStyle = 'rgba(255,209,102,0.72)'; ctx.shadowBlur = 0;
+    ctx.fillText('маршрут рекомендательный', cx, cy + 54);
     ctx.restore();
 }
 
@@ -3066,9 +3262,9 @@ function drawHUD() {
     }
     ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(0,245,255,0.45)'; ctx.font = '11px Courier New';
     const musicHint = audio.muted ? ' N=MUSIC:OFF' : ' N=MUSIC:ON';
-    const fireHint = (currentLevelConfig && (currentLevelConfig.hasBoss || currentLevelConfig.type === 'robot')) ? '  F=FIRE' : '';
+    const fireHint = (currentLevelConfig && currentLevelConfig.id >= 2) ? '  F=FIRE/GARAGE' : '';
     ctx.fillText(`TAB=ROUTE  M=MAP  R=RESTART  ESC=MENU  SPACE=PAUSE${fireHint}${musicHint}`, W - 28, 36);
-    if (currentLevelConfig && (currentLevelConfig.hasBoss || currentLevelConfig.type === 'robot')) {
+    if (currentLevelConfig && currentLevelConfig.id >= 2) {
         ctx.textAlign = 'left'; ctx.font = 'bold 12px Courier New';
         const hasAnyWeapon = playerWeapons.gun || playerWeapons.shotgun || playerWeapons.missile;
         const activeOk = hasAnyWeapon && playerWeapons[activeWeapon];
@@ -3132,8 +3328,10 @@ function drawMinimap() {
     }
     ctx.fillStyle = '#ff2bd6';
     for (const d of drones) ctx.fillRect(mx+d.x*sx-2, my+d.y*sy-2, 4, 4);
-    ctx.fillStyle = '#ffd166';
-    for (const r of robots) ctx.fillRect(mx+r.x*sx-3, my+r.y*sy-3, 6, 6);
+    for (const r of robots) {
+        ctx.fillStyle = getRobotStats(r.type).color;
+        ctx.fillRect(mx+r.x*sx-3, my+r.y*sy-3, 6, 6);
+    }
     if (boss && !boss.dead) {
         ctx.shadowColor = '#ff0000'; ctx.shadowBlur = 10; ctx.fillStyle = '#ff0000';
         ctx.beginPath(); ctx.arc(mx+boss.x*sx, my+boss.y*sy, 7, 0, Math.PI*2); ctx.fill();

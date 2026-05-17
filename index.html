@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Synthwave Courier: Last Cartridge v0.15 · Garage Route Fix</title>
+    <title>Synthwave Courier: Last Cartridge v0.16 · Garage Combat Boss</title>
     <link rel="stylesheet" href="styles/style.css" />
     <link rel="icon" type="image/jpeg" href="favicon.jpg" />
 </head>
@@ -50,8 +50,13 @@
 
 <div id="shop-overlay" class="hidden">
     <div class="panel">
-        <div class="shop-title">▸ NEXACOM SALVAGE MARKET ◂</div>
-        <p style="color:#c8b8f0;font-size:12px;margin:4px 0 0;letter-spacing:1px">Покупай улучшения перед миссией или подъезжай к гаражу на старте уровня</p>
+        <div class="shop-title">▸ NEXACOM GARAGE ◂</div>
+        <p style="color:#c8b8f0;font-size:12px;margin:4px 0 0;letter-spacing:1px">Покупка, выбор оружия, ремонт корпуса и заправка нитро</p>
+        <div id="garage-status" class="garage-status"></div>
+        <div class="garage-service-row">
+            <button class="quick-btn service-btn" id="garage-repair-btn" type="button">REPAIR BODY</button>
+            <button class="quick-btn service-btn" id="garage-refill-btn" type="button">REFILL NITRO</button>
+        </div>
         <div class="shop-grid" id="shop-items-container"></div>
         <div style="margin-top:10px;font-size:13px;color:#ffd166">💰 МОНЕТ: <span id="shop-coins-display">0</span></div>
         <button class="btn" style="margin-top:18px" id="shop-start-btn">▶ ПРОДОЛЖИТЬ</button>
@@ -63,7 +68,7 @@
 
 <div id="menu" class="overlay">
     <div class="panel">
-        <div class="version-tag">▸ NEXACOM INTERCEPTED · 1987 ◂</div>
+        <div class="version-tag">▸ NEXACOM INTERCEPTED · v0.16 ◂</div>
         <h1 class="title">Synthwave Courier</h1>
         <p style="font-size:13px;color:#ff2bd6;letter-spacing:3px;margin:0 0 18px">LAST CARTRIDGE</p>
         <p class="subtitle">
@@ -78,7 +83,7 @@
             <div><span class="k">M</span> — миникарта вкл/выкл</div>
             <div><span class="k">TAB</span> — маршрут вкл/выкл</div>
             <div><span class="k">H</span> — скрыть обучение</div>
-            <div><span class="k">F / ENTER</span> — огонь (оружие)</div>
+            <div><span class="k">F / ENTER</span> — огонь / вход в гараж</div>
             <div><span class="k">R</span> — рестарт</div>
             <div><span class="k">SPACE</span> — старт / пауза / продолжить</div>
             <div><span class="k">N</span> — музыка вкл/выкл</div>
