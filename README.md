@@ -8,9 +8,7 @@
 
 ## Быстрый старт
 
-Просто открой `index.html` в браузере. Никаких `npm install`, никакого сервера — всё работает как файл.
-
-Если хочешь Live Reload — Live Server в VS Code тоже подойдёт, конфиг уже лежит в `.vscode/launch.json`.
+откройте `index.html` в браузере, либо же по ссылке: https://code-brew-git-hub.github.io/Synthwave-Courier-Last-Cartridge/
 
 ---
 
