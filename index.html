@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Synthwave Courier: Last Cartridge v0.13 · Fixed</title>
+    <link rel="stylesheet" href="styles/style.css" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="crt-overlay"></div>
+<div id="comboDisplay"></div>
+<div id="tutorial-box" class="hidden"></div>
+<div id="level-badge" class="hidden"></div>
+
+<div id="quick-controls" class="hidden">
+    <button id="pause-toggle" class="quick-btn" type="button">⏸ Пауза</button>
+    <button id="restart-button" class="quick-btn danger" type="button">↻ Рестарт</button>
+    <button id="map-toggle" class="quick-btn" type="button">▣ Карта: ON</button>
+    <button id="route-toggle" class="quick-btn" type="button">◇ Маршрут: ON</button>
+    <button id="music-toggle" class="quick-btn muted" type="button">🔊 Музыка: ON</button>
+</div>
+
+<div id="radio-log"></div>
+
+<div id="danger-bar" class="hidden">
+    <div class="danger-label">▲ THREAT LEVEL</div>
+    <div class="danger-segments" id="danger-segs">
+        <div class="dseg" data-i="4"></div>
+        <div class="dseg" data-i="3"></div>
+        <div class="dseg" data-i="2"></div>
+        <div class="dseg" data-i="1"></div>
+        <div class="dseg" data-i="0"></div>
+    </div>
+</div>
+
+<div id="touch-controls">
+    <div class="touch-dpad">
+        <div class="touch-btn center" data-key="ArrowUp">▲</div>
+        <div class="touch-btn left"   data-key="ArrowLeft">◄</div>
+        <div class="touch-btn right"  data-key="ArrowRight">►</div>
+        <div class="touch-btn down"   data-key="ArrowDown">▼</div>
+    </div>
+</div>
+<div id="boost-btn" data-key="Shift">BOOST<span style="font-size:10px;opacity:0.7">SHIFT</span></div>
+
+<div id="boss-hp-bar"><div id="boss-hp-fill" style="width:100%"></div></div>
+<div id="boss-name-label">👾 PETYA · NEXACOM ENFORCER</div>
+
+<div id="shop-overlay" class="hidden">
+    <div class="panel">
+        <div class="shop-title">▸ NEXACOM SALVAGE MARKET ◂</div>
+        <p style="color:#c8b8f0;font-size:12px;margin:4px 0 0;letter-spacing:1px">Купи снаряжение перед встречей с боссом</p>
+        <div class="shop-grid" id="shop-items-container"></div>
+        <div style="margin-top:10px;font-size:13px;color:#ffd166">💰 МОНЕТ: <span id="shop-coins-display">0</span></div>
+        <button class="btn" style="margin-top:18px" id="shop-start-btn">▶ В БОЙ!</button>
+        <button class="btn" style="margin-left:10px;border-color:#ff2bd6;color:#ff2bd6;box-shadow:0 0 20px rgba(255,43,214,0.3)" onclick="goToMenu()">◀ МЕНЮ</button>
+    </div>
+</div>
+
+<div id="fire-btn">🔥<span style="font-size:10px;opacity:0.7">FIRE</span></div>
+
+<div id="menu" class="overlay">
+    <div class="panel">
+        <div class="version-tag">▸ NEXACOM INTERCEPTED · 1987 ◂</div>
+        <h1 class="title">Synthwave Courier</h1>
+        <p style="font-size:13px;color:#ff2bd6;letter-spacing:3px;margin:0 0 18px">LAST CARTRIDGE</p>
+        <p class="subtitle">
+            <em>1987 год.</em> Корпорация NEXACOM закрывает последние аркадные клубы.<br><br>
+            У тебя остался <em>последний игровой картридж</em>. Если успеешь доставить его до полуночи — аркадная сцена выживет.<br><br>
+            Жёлтый маршрут самый быстрый. Используй <em>ускорители</em>, собирай бонусы, уходи от <em>дронов NEXACOM</em>.
+        </p>
+        <div class="controls-grid">
+            <div><span class="k">W/S · ↑↓</span> — газ / тормоз</div>
+            <div><span class="k">A/D · ←→</span> — поворот</div>
+            <div><span class="k">SHIFT</span> — нитро-ускорение</div>
+            <div><span class="k">M</span> — миникарта вкл/выкл</div>
+            <div><span class="k">TAB</span> — маршрут вкл/выкл</div>
+            <div><span class="k">H</span> — скрыть обучение</div>
+            <div><span class="k">F / ENTER</span> — огонь (оружие)</div>
+            <div><span class="k">R</span> — рестарт</div>
+            <div><span class="k">SPACE</span> — старт / пауза / продолжить</div>
+            <div><span class="k">N</span> — музыка вкл/выкл</div>
+        </div>
+        <div style="margin-top:16px;padding:12px;border:1px solid rgba(0,245,255,0.25);background:rgba(0,245,255,0.04);font-size:12px;color:#7ae8f0;line-height:1.6">
+            🟡 <strong style="color:#ffd166">B</strong> — нитро-заряд &nbsp;|&nbsp;
+            🟢 <strong style="color:#3cff7e">+</strong> — ремонт брони &nbsp;|&nbsp;
+            🔵 <strong style="color:#00f5ff">T</strong> — +10 секунд &nbsp;|&nbsp;
+            ⚡ <strong style="color:#00f5ff">→</strong> — буст-пад
+        </div>
+        <button class="btn" onclick="startGame()">▶ НАЖМИ SPACE ДЛЯ СТАРТА</button>
+        <button class="btn" style="margin-left:10px;border-color:#ff2bd6;color:#ff2bd6;box-shadow:0 0 20px rgba(255,43,214,0.35)" onclick="resetProgress()">RESET PROGRESS</button>
+    </div>
+</div>
+
+<div id="result" class="overlay hidden">
+    <div class="panel" id="result-panel"></div>
+</div>
+
+<script src="js/game.js"></script>
+</body>
+</html>
