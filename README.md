@@ -8,7 +8,7 @@
 
 ## Быстрый старт
 
-откройте `index.html` в браузере, либо же по ссылке: https://code-brew-git-hub.github.io/Synthwave-Courier-Last-Cartridge/
+откройте `index.html` в браузере, либо же по ссылке: [https://code-brew-git-hub.github.io/Synthwave-Courier-Last-Cartridge/](https://code-brew-git-hub.github.io/Synthwave-Courier-Last-Cartridge/)
 
 ---
 
