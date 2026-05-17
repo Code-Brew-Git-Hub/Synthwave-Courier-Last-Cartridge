@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Synthwave Courier: Last Cartridge v0.13 · Fixed</title>
+    <title>Synthwave Courier: Last Cartridge v0.15 · Garage Route Fix</title>
     <link rel="stylesheet" href="styles/style.css" />
-    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="icon" type="image/jpeg" href="favicon.jpg" />
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -51,10 +51,10 @@
 <div id="shop-overlay" class="hidden">
     <div class="panel">
         <div class="shop-title">▸ NEXACOM SALVAGE MARKET ◂</div>
-        <p style="color:#c8b8f0;font-size:12px;margin:4px 0 0;letter-spacing:1px">Купи снаряжение перед встречей с боссом</p>
+        <p style="color:#c8b8f0;font-size:12px;margin:4px 0 0;letter-spacing:1px">Покупай улучшения перед миссией или подъезжай к гаражу на старте уровня</p>
         <div class="shop-grid" id="shop-items-container"></div>
         <div style="margin-top:10px;font-size:13px;color:#ffd166">💰 МОНЕТ: <span id="shop-coins-display">0</span></div>
-        <button class="btn" style="margin-top:18px" id="shop-start-btn">▶ В БОЙ!</button>
+        <button class="btn" style="margin-top:18px" id="shop-start-btn">▶ ПРОДОЛЖИТЬ</button>
         <button class="btn" style="margin-left:10px;border-color:#ff2bd6;color:#ff2bd6;box-shadow:0 0 20px rgba(255,43,214,0.3)" onclick="goToMenu()">◀ МЕНЮ</button>
     </div>
 </div>
@@ -82,6 +82,8 @@
             <div><span class="k">R</span> — рестарт</div>
             <div><span class="k">SPACE</span> — старт / пауза / продолжить</div>
             <div><span class="k">N</span> — музыка вкл/выкл</div>
+            <div><span class="k">ESC</span> — главное меню</div>
+            <div><span class="k">1 / 2 / 3</span> — выбор оружия</div>
         </div>
         <div style="margin-top:16px;padding:12px;border:1px solid rgba(0,245,255,0.25);background:rgba(0,245,255,0.04);font-size:12px;color:#7ae8f0;line-height:1.6">
             🟡 <strong style="color:#ffd166">B</strong> — нитро-заряд &nbsp;|&nbsp;
@@ -89,8 +91,36 @@
             🔵 <strong style="color:#00f5ff">T</strong> — +10 секунд &nbsp;|&nbsp;
             ⚡ <strong style="color:#00f5ff">→</strong> — буст-пад
         </div>
-        <button class="btn" onclick="startGame()">▶ НАЖМИ SPACE ДЛЯ СТАРТА</button>
+        <button class="btn" onclick="startGame()">▶ ПРОДОЛЖИТЬ</button>
+        <button class="btn" style="margin-left:10px" onclick="openLevelSelect()">▣ ВЫБОР УРОВНЯ</button>
+        <button class="btn" style="margin-left:10px;border-color:#ffd166;color:#ffd166;box-shadow:0 0 20px rgba(255,209,102,0.3)" onclick="openGarageFromMenu()">▸ ГАРАЖ</button>
         <button class="btn" style="margin-left:10px;border-color:#ff2bd6;color:#ff2bd6;box-shadow:0 0 20px rgba(255,43,214,0.35)" onclick="resetProgress()">RESET PROGRESS</button>
+    </div>
+</div>
+
+<div id="level-select" class="overlay hidden">
+    <div class="panel wide-panel">
+        <div class="shop-title">▸ LEVEL SELECT ◂</div>
+        <p class="subtitle" style="font-size:12px;margin-bottom:12px">Выбери открытый уровень. Лучшие результаты сохраняются.</p>
+        <div id="level-list" class="level-list"></div>
+        <button class="btn" onclick="goToMenu()">◀ ГЛАВНОЕ МЕНЮ</button>
+    </div>
+</div>
+
+
+<div id="esc-confirm" class="overlay hidden">
+    <div class="panel confirm-panel">
+        <div class="version-tag">▸ SYSTEM WARNING ◂</div>
+        <h1 class="title confirm-title">ВЫЙТИ В МЕНЮ?</h1>
+        <p class="subtitle confirm-text">
+            Текущее положение машины не сохранится.<br>
+            При продолжении уровень начнётся заново.
+        </p>
+        <div class="confirm-actions">
+            <button class="btn" id="esc-confirm-stay" type="button">▶ ОСТАТЬСЯ</button>
+            <button class="btn danger-btn" id="esc-confirm-leave" type="button">◀ ВЫЙТИ В МЕНЮ</button>
+        </div>
+        <p class="confirm-hint">ESC — остаться · ENTER — выйти</p>
     </div>
 </div>
 

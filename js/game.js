@@ -14,6 +14,8 @@ const KEY_MAP = {
     'r': 'restart', 'к': 'restart',
     'h': 'hide',    'р': 'hide',
     'n': 'music',   'т': 'music',
+    'escape': 'menu',
+    '1': 'weapon1', '2': 'weapon2', '3': 'weapon3',
 };
 
 // Also handle by event.code for layout-independent physical keys
@@ -29,6 +31,8 @@ const CODE_MAP = {
     'KeyR': 'restart',
     'KeyH': 'hide',
     'KeyN': 'music',
+    'Escape': 'menu',
+    'Digit1': 'weapon1', 'Digit2': 'weapon2', 'Digit3': 'weapon3',
 };
 
 function normalizeKey(e) {
@@ -51,6 +55,15 @@ let tutorialHidden = false;
 let tutorialFlags = { moved:false, turned:false, boosted:false, map:false, bonus:false, drone:false, glitch:false, finish:false };
 let levelCompletedOnce = false;
 let musicEnabled = true;
+let activeWeapon = 'gun';
+let bestByLevel = {};
+let shopReturnState = 'menu';
+let shopWasPaused = false;
+let bossSpawned = false;
+let gpsRoutePoints = [];
+let robots = [];
+let robotBullets = [];
+let shopZone = null;
 
 const LEVELS = [
     {
@@ -547,6 +560,7 @@ const SHOP_ITEMS = [
 ];
 
 let playerWeapons = { gun:false, shotgun:false, missile:false, armor:false, armor2:false, nitro2:false, nitro3:false, radar:false };
+const WEAPON_IDS = ['gun', 'shotgun', 'missile'];
 let bullets = [];
 let bossBullets = [];
 let missiles = [];
@@ -756,6 +770,9 @@ const routeToggleBtn = document.getElementById('route-toggle');
 const musicToggleBtn = document.getElementById('music-toggle');
 const tutorialBox = document.getElementById('tutorial-box');
 const levelBadge = document.getElementById('level-badge');
+const escConfirmEl = document.getElementById('esc-confirm');
+const escConfirmStayBtn = document.getElementById('esc-confirm-stay');
+const escConfirmLeaveBtn = document.getElementById('esc-confirm-leave');
 
 const audio = new AudioEngine();
 const radio = new RadioSystem();
@@ -775,6 +792,8 @@ let nearFinishRadioDone = false;
 let offroadRadioCooldown = 0;
 let lowHpRadioDone = false;
 let lowTimeRadioDone = false, critTimeRadioDone = false;
+let escConfirmOpen = false;
+let escConfirmWasPaused = false;
 
 const player = {
     x: 160, y: WORLD.height - 180,
@@ -921,6 +940,52 @@ function updateQuickControls() {
     if (musicToggleBtn) musicToggleBtn.textContent = audio.muted ? '🔇 Музыка: OFF' : '🔊 Музыка: ON';
 }
 
+function getShopDrivePad() {
+    if (!shopZone) return null;
+    return { x: shopZone.doorX - 120, y: shopZone.doorY - 120, w: 240, h: 240 };
+}
+
+function isPlayerAtShopEntrance() {
+    const pad = getShopDrivePad();
+    return !!pad && rectsOverlap(getPlayerRect(), pad);
+}
+
+function showEscConfirm() {
+    if (!escConfirmEl || state !== 'playing') return;
+    escConfirmOpen = true;
+    escConfirmWasPaused = paused;
+    paused = true;
+    audio.silence();
+    keys.clear();
+    escConfirmEl.classList.remove('hidden');
+    updateQuickControls();
+}
+
+function hideEscConfirm(restorePause = true) {
+    if (!escConfirmEl) return;
+    escConfirmEl.classList.add('hidden');
+    escConfirmOpen = false;
+    if (restorePause && state === 'playing') paused = escConfirmWasPaused;
+    updateQuickControls();
+}
+
+function confirmEscToMenu() {
+    hideEscConfirm(false);
+    goToMenu();
+}
+
+function requestMainMenuFromEsc() {
+    if (state === 'playing') {
+        showEscConfirm();
+        return;
+    }
+    if (state === 'shop') {
+        goToMenu();
+        return;
+    }
+    goToMenu();
+}
+
 function togglePause() {
     if (state !== 'playing') return;
     paused = !paused;
@@ -932,6 +997,46 @@ function toggleMinimap() { minimapEnabled = !minimapEnabled; updateQuickControls
 function toggleRoute() { recommendedRouteVisible = !recommendedRouteVisible; updateQuickControls(); }
 function toggleMusic() { audio.toggleMusic(); updateQuickControls(); }
 function restartGame() { if (state !== 'menu') startGame(); }
+
+function openLevelSelect() {
+    const el = document.getElementById('level-select');
+    const list = document.getElementById('level-list');
+    if (!el || !list) return;
+    state = 'levelSelect';
+    menuEl.classList.add('hidden');
+    resultEl.classList.add('hidden');
+    shopOverlay.classList.add('hidden');
+    list.innerHTML = '';
+    LEVELS.forEach((lvl, idx) => {
+        const unlocked = idx + 1 <= maxUnlockedLevel;
+        const best = bestByLevel[lvl.id] || null;
+        const completed = !!best?.completed;
+        const card = document.createElement('div');
+        card.className = 'level-card' + (!unlocked ? ' locked' : '') + (completed ? ' completed' : '');
+        card.innerHTML = `
+            <div class="level-num">${String(lvl.id).padStart(2, '0')}</div>
+            <div><div class="level-name">${lvl.name}</div><div class="level-meta">${lvl.type.toUpperCase()} · ${lvl.objective}</div></div>
+            <div class="level-best">${best ? `BEST ${best.bestRank || '-'}<br>${best.bestScore || 0}` : 'BEST —'}</div>
+            <div class="level-status">${unlocked ? (completed ? 'COMPLETED' : 'UNLOCKED') : 'LOCKED'}</div>
+        `;
+        if (unlocked) {
+            card.addEventListener('click', () => {
+                currentLevelIndex = idx;
+                saveProgress();
+                el.classList.add('hidden');
+                startGame();
+            });
+        }
+        list.appendChild(card);
+    });
+    el.classList.remove('hidden');
+}
+
+function playLevel(index) {
+    currentLevelIndex = clamp(index, 0, LEVELS.length - 1);
+    saveProgress();
+    startGame();
+}
 
 // ── LEVEL / PROGRESS / TUTORIAL ──────────────────
 function loadProgress() {
@@ -948,6 +1053,9 @@ function loadProgress() {
             playerWeapons = { ...playerWeapons, ...data.weapons };
             SHOP_ITEMS.forEach(it => { if (playerWeapons[it.id]) it.owned = true; });
         }
+        if (data.activeWeapon && playerWeapons[data.activeWeapon]) activeWeapon = data.activeWeapon;
+        else if (playerWeapons.gun) activeWeapon = 'gun';
+        bestByLevel = data.bestByLevel || {};
     } catch(e) {}
 }
 
@@ -957,6 +1065,8 @@ function saveProgress() {
             maxUnlockedLevel, coins, tutorialHidden,
             currentLevel: currentLevelIndex + 1,
             weapons: playerWeapons,
+            activeWeapon,
+            bestByLevel,
         }));
     } catch(e) {}
 }
@@ -965,6 +1075,8 @@ function resetProgress() {
     try { localStorage.removeItem('synthwaveCourierProgress'); } catch(e) {}
     maxUnlockedLevel = 1; coins = 0; tutorialHidden = false; currentLevelIndex = 0;
     playerWeapons = { gun:false, shotgun:false, missile:false, armor:false, armor2:false, nitro2:false, nitro3:false, radar:false };
+    activeWeapon = 'gun';
+    bestByLevel = {};
     SHOP_ITEMS.forEach(it => it.owned = false);
     saveProgress();
 }
@@ -1023,13 +1135,24 @@ const shopItemsContainer = document.getElementById('shop-items-container');
 const shopStartBtn = document.getElementById('shop-start-btn');
 const fireBtnEl = document.getElementById('fire-btn');
 
-function openShop() {
+function openShop(mode = 'mission') {
+    shopReturnState = mode;
+    shopWasPaused = paused;
+    if (state === 'playing') paused = true;
     state = 'shop';
     menuEl.classList.add('hidden');
     resultEl.classList.add('hidden');
+    const levelSelectEl = document.getElementById('level-select');
+    if (levelSelectEl) levelSelectEl.classList.add('hidden');
+    if (escConfirmEl) escConfirmEl.classList.add('hidden');
+    escConfirmOpen = false;
     shopOverlay.classList.remove('hidden');
+    if (shopStartBtn) shopStartBtn.textContent = mode === 'drive' ? '▶ ВЕРНУТЬСЯ В ИГРУ' : mode === 'menu' ? '◀ ГЛАВНОЕ МЕНЮ' : '▶ В БОЙ!';
     renderShopItems();
 }
+
+function openGarageFromMenu() { openShop('menu'); }
+function openGarageFromDrive() { openShop('drive'); }
 
 function renderShopItems() {
     if (!shopItemsContainer) return;
@@ -1038,29 +1161,46 @@ function renderShopItems() {
     SHOP_ITEMS.forEach(item => {
         const reqOk = !item.requires || playerWeapons[item.requires];
         const locked = !reqOk;
+        const equipped = item.category === 'weapon' && item.owned && activeWeapon === item.id;
         const div = document.createElement('div');
-        div.className = 'shop-item' + (item.owned ? ' owned' : '') + (locked ? ' locked' : '');
+        div.className = 'shop-item' + (item.owned ? ' owned' : '') + (locked ? ' locked' : '') + (equipped ? ' equipped' : '');
         if (locked) {
             div.style.opacity = '0.45';
             div.style.cursor = 'not-allowed';
         }
         const categoryColor = item.category === 'weapon' ? '#ff2bd6' : item.category === 'defense' ? '#3cff7e' : item.category === 'engine' ? '#00f5ff' : '#ffd166';
+        const actionLabel = locked
+            ? `🔒 НУЖНО: ${SHOP_ITEMS.find(i=>i.id===item.requires)?.name || ''}`
+            : item.category === 'weapon' && item.owned
+                ? (equipped ? '★ ВЫБРАНО' : '▶ ВЫБРАТЬ')
+                : item.owned
+                    ? '✔ КУПЛЕНО'
+                    : `💰 ${item.price} монет`;
         div.innerHTML = `
       <div style="font-size:9px;color:${categoryColor};letter-spacing:2px;margin-bottom:3px">${item.category.toUpperCase()} T${item.tier}</div>
       <div class="shop-item-icon">${item.icon}</div>
       <div class="shop-item-name">${item.name}</div>
       <div class="shop-item-desc">${item.desc}</div>
-      ${locked ? `<div class="shop-item-price" style="color:#ff2bd6">🔒 НУЖНО: ${SHOP_ITEMS.find(i=>i.id===item.requires)?.name || ''}</div>` :
-            `<div class="shop-item-price">${item.owned ? '✔ КУПЛЕНО' : `💰 ${item.price} монет`}</div>`}
+      <div class="shop-item-price" style="color:${locked ? '#ff2bd6' : equipped ? '#ffd166' : '#ffd166'}">${actionLabel}</div>
       ${item.owned ? '<div class="shop-item-owned-badge">✔</div>' : ''}
     `;
-        if (!item.owned && !locked) {
-            div.addEventListener('click', () => buyItem(item.id));
+        if (!locked) {
+            div.addEventListener('click', () => {
+                if (item.category === 'weapon' && item.owned) equipWeapon(item.id);
+                else if (!item.owned) buyItem(item.id);
+            });
         }
         shopItemsContainer.appendChild(div);
     });
 }
 
+function equipWeapon(id) {
+    if (!WEAPON_IDS.includes(id) || !playerWeapons[id]) return;
+    activeWeapon = id;
+    saveProgress();
+    audio.beep(740, 0.09, 0.02, 'triangle');
+    renderShopItems();
+}
 function buyItem(id) {
     const item = SHOP_ITEMS.find(i => i.id === id);
     if (!item || item.owned) return;
@@ -1075,6 +1215,7 @@ function buyItem(id) {
     coins -= item.price;
     item.owned = true;
     playerWeapons[id] = true;
+    if (item.category === 'weapon' && (!activeWeapon || !playerWeapons[activeWeapon])) activeWeapon = id;
     saveProgress();
     audio.beep(880, 0.12, 0.025, 'triangle');
     renderShopItems();
@@ -1082,15 +1223,39 @@ function buyItem(id) {
 
 function goToMenu() {
     shopOverlay.classList.add('hidden');
+    resultEl.classList.add('hidden');
+    const levelSelectEl = document.getElementById('level-select');
+    if (levelSelectEl) levelSelectEl.classList.add('hidden');
+    if (escConfirmEl) escConfirmEl.classList.add('hidden');
+    escConfirmOpen = false;
+    dangerBar.classList.add('hidden');
+    if (quickControls) quickControls.classList.add('hidden');
+    if (levelBadge) levelBadge.classList.add('hidden');
+    setTutorialMessage('');
+    keys.clear();
+    paused = false;
     state = 'menu';
+    audio.silence();
     menuEl.classList.remove('hidden');
 }
 
+function closeShop() {
+    shopOverlay.classList.add('hidden');
+    if (shopReturnState === 'drive') {
+        state = 'playing';
+        paused = shopWasPaused;
+        updateQuickControls();
+        return;
+    }
+    if (shopReturnState === 'menu') {
+        goToMenu();
+        return;
+    }
+    startGameActual();
+}
+
 if (shopStartBtn) {
-    shopStartBtn.addEventListener('click', () => {
-        shopOverlay.classList.add('hidden');
-        startGameActual();
-    });
+    shopStartBtn.addEventListener('click', closeShop);
 }
 
 // ── BOSS SYSTEM ───────────────────────────────────
@@ -1242,6 +1407,14 @@ function updateMissiles(dt) {
         // Find target (boss first, then drones)
         let tx = null, ty = null;
         if (boss && !boss.dead) { tx = boss.x; ty = boss.y; }
+        else if (robots.length > 0) {
+            let best = null, bd = Infinity;
+            for (const r of robots) {
+                const dd = dist(m.x, m.y, r.x, r.y);
+                if (dd < bd) { bd = dd; best = r; }
+            }
+            if (best) { tx = best.x; ty = best.y; }
+        }
         else if (drones.length > 0) {
             let best = null, bd = Infinity;
             for (const d of drones) {
@@ -1274,6 +1447,23 @@ function updateMissiles(dt) {
             if (boss.hp <= 0) killBoss();
             continue;
         }
+        // Collision with robots
+        for (let ri = robots.length - 1; ri >= 0; ri--) {
+            const r = robots[ri];
+            if (dist(m.x, m.y, r.x, r.y) < 36) {
+                r.hp -= 180;
+                spawnExplosion(m.x, m.y, '#ffd166', 20);
+                if (r.hp <= 0) {
+                    spawnExplosion(r.x, r.y, '#ff2bd6', 26);
+                    robots.splice(ri, 1);
+                    player.score += 450 * comboMultiplier;
+                    addCombo(450);
+                }
+                missiles.splice(i, 1);
+                break;
+            }
+        }
+        if (!missiles[i]) continue;
         // Collision with drones
         for (let di = drones.length - 1; di >= 0; di--) {
             if (dist(m.x, m.y, drones[di].x, drones[di].y) < 30) {
@@ -1294,9 +1484,12 @@ function fireBullet() {
         audio.beep(80, 0.1, 0.015, 'sawtooth');
         return;
     }
+    if (!playerWeapons[activeWeapon]) {
+        activeWeapon = playerWeapons.gun ? 'gun' : playerWeapons.shotgun ? 'shotgun' : 'missile';
+        saveProgress();
+    }
 
-    // Missile launcher (highest priority if owned)
-    if (playerWeapons.missile) {
+    if (activeWeapon === 'missile') {
         if ((player._missileCooldown || 0) > 0) return;
         missiles.push({
             x: player.x + Math.cos(player.angle) * 36,
@@ -1312,8 +1505,7 @@ function fireBullet() {
         return;
     }
 
-    // Shotgun (fan of 5)
-    if (playerWeapons.shotgun) {
+    if (activeWeapon === 'shotgun') {
         if ((player._shotgunCooldown || 0) > 0) return;
         const spread = 0.22;
         for (let i = -2; i <= 2; i++) {
@@ -1331,7 +1523,6 @@ function fireBullet() {
         return;
     }
 
-    // Basic gun
     if ((player._gunCooldown || 0) > 0) return;
     bullets.push({
         x: player.x + Math.cos(player.angle) * 32,
@@ -1369,6 +1560,24 @@ function updatePlayerBullets(dt) {
                 continue;
             }
         }
+        for (let ri = robots.length - 1; ri >= 0; ri--) {
+            const r = robots[ri];
+            if (dist(b.x, b.y, r.x, r.y) < b.r + 24) {
+                r.hp = Math.max(0, r.hp - 55);
+                bullets.splice(i, 1);
+                spawnExplosion(b.x, b.y, '#ffd166', 10);
+                audio.beep(500, 0.05, 0.016, 'triangle');
+                if (r.hp <= 0) {
+                    spawnExplosion(r.x, r.y, '#ff2bd6', 24);
+                    robots.splice(ri, 1);
+                    player.score += 350 * comboMultiplier;
+                    addCombo(350);
+                    addFloatingText(r.x, r.y, '+350 ROBOT', '#ff2bd6', 15);
+                }
+                continue;
+            }
+        }
+        if (!bullets[i]) continue;
         for (let di = drones.length - 1; di >= 0; di--) {
             const d2 = dist(b.x, b.y, drones[di].x, drones[di].y);
             if (d2 < b.r + drones[di].r) {
@@ -1449,9 +1658,135 @@ function snapRouteToRoads() {
     }
 }
 
+
+function pointOnAnyRoad(x, y, margin = 0) {
+    return roads.some(r => x >= r.x - margin && x <= r.x + r.w + margin && y >= r.y - margin && y <= r.y + r.h + margin);
+}
+
+function segmentOnRoad(a, b) {
+    const steps = Math.max(2, Math.ceil(dist(a.x, a.y, b.x, b.y) / 45));
+    for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const x = a.x + (b.x - a.x) * t;
+        const y = a.y + (b.y - a.y) * t;
+        if (!pointOnAnyRoad(x, y, 8)) return false;
+    }
+    return true;
+}
+
+function buildGpsRoute() {
+    gpsRoutePoints = [];
+    if (!routeBeacons.length) return;
+    gpsRoutePoints.push({ x: routeBeacons[0].x, y: routeBeacons[0].y, label: routeBeacons[0].label });
+    for (let i = 1; i < routeBeacons.length; i++) {
+        const a = gpsRoutePoints[gpsRoutePoints.length - 1];
+        const b = routeBeacons[i];
+        if (Math.abs(a.x - b.x) < 2 || Math.abs(a.y - b.y) < 2) {
+            gpsRoutePoints.push({ ...b });
+            continue;
+        }
+        const elbow1 = { x: b.x, y: a.y, label: '' };
+        const elbow2 = { x: a.x, y: b.y, label: '' };
+        const ok1 = pointOnAnyRoad(elbow1.x, elbow1.y, 10) && segmentOnRoad(a, elbow1) && segmentOnRoad(elbow1, b);
+        const ok2 = pointOnAnyRoad(elbow2.x, elbow2.y, 10) && segmentOnRoad(a, elbow2) && segmentOnRoad(elbow2, b);
+        if (ok1) gpsRoutePoints.push(elbow1, { ...b });
+        else if (ok2) gpsRoutePoints.push(elbow2, { ...b });
+        else {
+            // last-resort: still draw Manhattan, never diagonal. Route remains visual GPS, not physics.
+            gpsRoutePoints.push(elbow2, { ...b });
+        }
+    }
+}
+
+function buildShopZone() {
+    const s = currentLevelConfig.start;
+    let road = roads.find(r => s.x >= r.x && s.x <= r.x + r.w && s.y >= r.y && s.y <= r.y + r.h) || roads[0];
+    const horiz = road.w >= road.h;
+    const w = 190, h = 128;
+    let x = horiz ? clamp(s.x + 190, road.x + 80, road.x + road.w - 260) : road.x + road.w + 34;
+    let y = horiz ? road.y - h - 34 : clamp(s.y + 120, road.y + 70, road.y + road.h - 180);
+    if (y < 40) y = road.y + road.h + 34;
+    if (x + w > WORLD.width - 30) x = road.x - w - 34;
+    if (x < 30) x = road.x + road.w + 34;
+    shopZone = { x, y, w, h, doorX: horiz ? x + w / 2 : x, doorY: horiz ? road.y + 8 : y + h / 2, active: false, phase: 0 };
+}
+
+function getBossArenaRect() {
+    if (!currentLevelConfig || !currentLevelConfig.hasBoss) return null;
+    const zone = (currentLevelConfig.visualDistricts || []).find(z => /BOSS ARENA/i.test(z.label));
+    return zone ? { x: zone.x, y: zone.y, w: zone.w, h: zone.h } : { x: 2240, y: 140, w: 1780, h: 780 };
+}
+
+function spawnRobots() {
+    robots.length = 0;
+    if (!currentLevelConfig || currentLevelConfig.type !== 'robot') return;
+    const arena = (currentLevelConfig.visualDistricts || []).find(z => /ROBOT ARENA/i.test(z.label)) || { x: 1000, y: 1300, w: 1700, h: 900 };
+    const count = Math.max(7, Math.floor(currentLevelConfig.droneCount * 0.65));
+    for (let i = 0; i < count; i++) {
+        robots.push({
+            x: arena.x + 100 + Math.random() * Math.max(100, arena.w - 200),
+            y: arena.y + 100 + Math.random() * Math.max(100, arena.h - 200),
+            w: 46, h: 46, hp: 120, maxHp: 120,
+            vx: 0, vy: 0, phase: Math.random() * Math.PI * 2,
+            shootCooldown: 0.8 + Math.random() * 1.6,
+            ramCooldown: 0,
+        });
+    }
+}
+
+function updateRobots(dt) {
+    for (let i = robots.length - 1; i >= 0; i--) {
+        const r = robots[i];
+        r.phase += dt * 2.5;
+        r.shootCooldown -= dt;
+        r.ramCooldown -= dt;
+        const dx = player.x - r.x, dy = player.y - r.y;
+        const d = Math.hypot(dx, dy) || 1;
+        const chase = d < 620;
+        const force = chase ? 115 : 35;
+        r.vx += (chase ? dx / d : Math.cos(r.phase)) * force * dt;
+        r.vy += (chase ? dy / d : Math.sin(r.phase * 0.8)) * force * dt;
+        const spd = Math.hypot(r.vx, r.vy);
+        const maxSpd = chase ? 135 : 70;
+        if (spd > maxSpd) { r.vx = r.vx / spd * maxSpd; r.vy = r.vy / spd * maxSpd; }
+        r.vx *= Math.pow(0.965, dt * 60);
+        r.vy *= Math.pow(0.965, dt * 60);
+        r.x += r.vx * dt; r.y += r.vy * dt;
+        const robotRect = { x: r.x - r.w/2, y: r.y - r.h/2, w: r.w, h: r.h };
+        if (!roads.some(rd => rectsOverlap(robotRect, rd))) { r.x -= r.vx * dt; r.y -= r.vy * dt; r.vx *= -0.5; r.vy *= -0.5; }
+        if (d < 46 && player.invincible <= 0 && r.ramCooldown <= 0) {
+            const dmg = 18 * (1 - player.damageReduction);
+            player.hp -= dmg;
+            player.invincible = 0.45;
+            r.ramCooldown = 1.0;
+            shake = Math.max(shake, 12); flash = Math.max(flash, 0.10); flashColor = 'rgba(255,43,214,';
+            spawnExplosion(player.x, player.y, '#ff2bd6', 10);
+        }
+        if (chase && d < 520 && r.shootCooldown <= 0) {
+            const a = Math.atan2(dy, dx);
+            robotBullets.push({ x: r.x, y: r.y, vx: Math.cos(a) * 260, vy: Math.sin(a) * 260, life: 2.2, r: 6 });
+            r.shootCooldown = 1.6 + Math.random() * 0.8;
+            audio.beep(200, 0.04, 0.012, 'square');
+        }
+    }
+}
+
+function updateRobotBullets(dt) {
+    for (let i = robotBullets.length - 1; i >= 0; i--) {
+        const b = robotBullets[i];
+        b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
+        if (b.life <= 0 || b.x < 0 || b.y < 0 || b.x > WORLD.width || b.y > WORLD.height) { robotBullets.splice(i, 1); continue; }
+        if (dist(b.x, b.y, player.x, player.y) < b.r + 22 && player.invincible <= 0) {
+            player.hp -= 16 * (1 - player.damageReduction);
+            player.invincible = 0.45;
+            shake = Math.max(shake, 10); flash = Math.max(flash, 0.10); flashColor = 'rgba(255,43,214,';
+            robotBullets.splice(i, 1);
+        }
+    }
+}
 function createWorld() {
     applyLevelConfig();
-    buildings.length = 0; drones.length = 0;
+    buildings.length = 0; drones.length = 0; robots.length = 0; robotBullets.length = 0;
     bonuses.length = 0; glitches.length = 0; barricades.length = 0;
     neonSigns.length = 0; roadLights.length = 0;
     districtZones.length = 0; landmarkSigns.length = 0;
@@ -1460,12 +1795,14 @@ function createWorld() {
     missiles.length = 0;
 
     buildBarricades();
-    snapRouteToRoads(); // FIX #4
+    snapRouteToRoads();
+    buildGpsRoute();
+    buildShopZone();
 
     for (const z of currentLevelConfig.visualDistricts || []) districtZones.push({ ...z, phase: Math.random() * Math.PI * 2 });
     for (const l of currentLevelConfig.landmarks || []) landmarkSigns.push({ ...l, phase: Math.random() * Math.PI * 2 });
 
-    const blocked = [...roads, dest, ...barricades.map(getBarricadeRect)];
+    const blocked = [...roads, dest, ...(shopZone ? [shopZone] : []), ...barricades.map(getBarricadeRect)];
 
     for (let y = 80; y < WORLD.height - 80; y += currentLevelConfig.buildingStepY) {
         for (let x = 80; x < WORLD.width - 80; x += currentLevelConfig.buildingStepX) {
@@ -1483,6 +1820,7 @@ function createWorld() {
     const droneRoads = roads.slice(2);
     for (let i = 0; i < currentLevelConfig.droneCount; i++) {
         const road = droneRoads[i % droneRoads.length];
+        if (currentLevelConfig.type === 'robot' && i > 5) continue;
         drones.push({
             x: road.x + 40 + Math.random() * Math.max(10, road.w - 80),
             y: road.y + 40 + Math.random() * Math.max(10, road.h - 80),
@@ -1493,6 +1831,7 @@ function createWorld() {
             speedMod: droneSpeedMod,
         });
     }
+    spawnRobots();
 
     const bonusTypes = ['boost','repair','time'];
     for (let i = 0; i < currentLevelConfig.bonusCount; i++) {
@@ -1573,21 +1912,52 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
+function handleFireAction() {
+    if (state !== 'playing') return;
+    if (isPlayerAtShopEntrance()) {
+        openGarageFromDrive();
+        keys.delete('fire');
+        return;
+    }
+    fireBullet();
+}
+
 // ── INPUT — Fix #5: layout-independent key mapping ──
 window.addEventListener('keydown', e => {
     const action = normalizeKey(e);
     if (!action) return;
 
+    if (escConfirmOpen) {
+        if (action === 'menu') { e.preventDefault(); hideEscConfirm(true); return; }
+        if (action === 'space') { e.preventDefault(); hideEscConfirm(true); return; }
+        if (action === 'fire') { e.preventDefault(); confirmEscToMenu(); return; }
+        return;
+    }
+
+    if (action === 'menu') { e.preventDefault(); requestMainMenuFromEsc(); return; }
+    if (action === 'weapon1') { if (playerWeapons.gun) equipWeapon('gun'); return; }
+    if (action === 'weapon2') { if (playerWeapons.shotgun) equipWeapon('shotgun'); return; }
+    if (action === 'weapon3') { if (playerWeapons.missile) equipWeapon('missile'); return; }
     if (action === 'space') {
         e.preventDefault();
         if (state === 'menu') startGame();
+        else if (state === 'levelSelect') goToMenu();
         else if (state === 'win' || state === 'lose') startGame();
         else if (state === 'playing') togglePause();
         return;
     }
     if (action === 'tab') { e.preventDefault(); if (state === 'playing') toggleRoute(); return; }
     if (action === 'hide' && state === 'playing') { tutorialHidden = !tutorialHidden; saveProgress(); updateTutorial(); return; }
-    if (action === 'fire' && state === 'playing') { e.preventDefault(); fireBullet(); return; }
+    if (action === 'fire' && state === 'playing') {
+        e.preventDefault();
+        if (isPlayerAtShopEntrance()) {
+            openGarageFromDrive();
+            keys.delete('fire');
+            return;
+        }
+        fireBullet();
+        return;
+    }
     if (action === 'restart' && state !== 'menu') { restartGame(); return; }
     if (action === 'map' && state === 'playing') { toggleMinimap(); return; }
     if (action === 'music') { toggleMusic(); return; }
@@ -1613,9 +1983,9 @@ boostBtn.addEventListener('touchstart', e => { e.preventDefault(); keys.add('boo
 boostBtn.addEventListener('touchend',   e => { e.preventDefault(); keys.delete('boost'); boostBtn.classList.remove('pressed'); }, { passive:false });
 
 if (fireBtnEl) {
-    fireBtnEl.addEventListener('touchstart', e => { e.preventDefault(); fireBullet(); fireBtnEl.classList.add('pressed'); }, { passive:false });
+    fireBtnEl.addEventListener('touchstart', e => { e.preventDefault(); handleFireAction(); fireBtnEl.classList.add('pressed'); }, { passive:false });
     fireBtnEl.addEventListener('touchend',   e => { e.preventDefault(); fireBtnEl.classList.remove('pressed'); }, { passive:false });
-    fireBtnEl.addEventListener('click', () => fireBullet());
+    fireBtnEl.addEventListener('click', () => handleFireAction());
 }
 
 if (pauseToggleBtn) pauseToggleBtn.addEventListener('click', togglePause);
@@ -1623,12 +1993,14 @@ if (restartButton) restartButton.addEventListener('click', restartGame);
 if (mapToggleBtn) mapToggleBtn.addEventListener('click', toggleMinimap);
 if (routeToggleBtn) routeToggleBtn.addEventListener('click', toggleRoute);
 if (musicToggleBtn) musicToggleBtn.addEventListener('click', toggleMusic);
+if (escConfirmStayBtn) escConfirmStayBtn.addEventListener('click', () => hideEscConfirm(true));
+if (escConfirmLeaveBtn) escConfirmLeaveBtn.addEventListener('click', confirmEscToMenu);
 
 // ── GAME LIFECYCLE ────────────────────────────────
 function startGame() {
     audio.init();
     const lvlCfg = LEVELS[currentLevelIndex] || LEVELS[LEVELS.length - 1];
-    if (lvlCfg.hasShop) openShop();
+    if (lvlCfg.hasShop) openShop('mission');
     else startGameActual();
 }
 
@@ -1646,7 +2018,7 @@ function startGameActual() {
     lowTimeRadioDone = false; critTimeRadioDone = false;
     dangerLevel = 0; recommendedRouteVisible = true;
     combo = 0; comboTimer = 0; comboMultiplier = 1; comboShowTimer = 0;
-    gameClock = 0; levelCompletedOnce = false;
+    gameClock = 0; levelCompletedOnce = false; bossSpawned = false;
     resetTutorialFlags();
     applyLevelConfig();
 
@@ -1667,6 +2039,7 @@ function startGameActual() {
     shake = 0; flash = 0;
     floatingTexts.length = 0;
     bullets.length = 0; bossBullets.length = 0; missiles.length = 0;
+    robots.length = 0; robotBullets.length = 0;
     boss = null;
     if (comboDisplay) comboDisplay.style.opacity = 0;
     createWorld();
@@ -1679,10 +2052,6 @@ function startGameActual() {
         document.getElementById('boss-hp-bar').style.display = 'none';
         document.getElementById('boss-name-label').style.display = 'none';
         if (fireBtnEl) fireBtnEl.classList.add('active');
-        setTimeout(() => {
-            if (state === 'playing' && currentLevelConfig.hasBoss) spawnBoss();
-        }, 20000);
-        radio.say('boss_spawn', 'danger');
     } else {
         updateBossHUD();
     }
@@ -1717,6 +2086,13 @@ function endGame(win, scores = {}) {
         if (total > 6500) rank = 'A';
         if (total > 9000) rank = 'S';
         const completedLevel = currentLevelIndex;
+        const lvlId = currentLevelConfig.id;
+        const prevBest = bestByLevel[lvlId] || {};
+        bestByLevel[lvlId] = {
+            completed: true,
+            bestScore: Math.max(prevBest.bestScore || 0, total),
+            bestRank: rank,
+        };
         if (currentLevelIndex < LEVELS.length - 1) currentLevelIndex++;
         saveProgress();
         const nextButtonText = completedLevel < LEVELS.length - 1 ? '▶ СЛЕДУЮЩИЙ УРОВЕНЬ' : '▶ ИГРАТЬ СНОВА';
@@ -1742,6 +2118,9 @@ function endGame(win, scores = {}) {
       </div>
       <p style="color:#7ae8f0;font-size:12px;margin:0 0 16px">ARCADE SCENE SAVED · 1987</p>
       <button class="btn" onclick="startGame()">${nextButtonText}</button>
+      <button class="btn" style="margin-left:10px;border-color:#ffd166;color:#ffd166" onclick="playLevel(${completedLevel})">↻ ПОВТОРИТЬ</button>
+      <button class="btn" style="margin-left:10px;border-color:#00f5ff;color:#00f5ff" onclick="openGarageFromMenu()">▸ ГАРАЖ</button>
+      <button class="btn" style="margin-left:10px;border-color:#ff2bd6;color:#ff2bd6" onclick="goToMenu()">◀ МЕНЮ</button>
     `;
     } else {
         resultPanel.innerHTML = `
@@ -1750,8 +2129,10 @@ function endGame(win, scores = {}) {
       <p class="subtitle" style="color:#ff8ad6">
         ${scores.reason || 'Картридж потерян в неоновом шуме.'}<br><br>ARCADE SCENE LOST · 1987
       </p>
-      ${(isBossLevel || isRobotLevel) ? '<button class="btn" style="border-color:#ff2bd6;color:#ff2bd6" onclick="openShop()">🔫 В МАГАЗИН</button> ' : ''}
+      ${(isBossLevel || isRobotLevel) ? '<button class="btn" style="border-color:#ff2bd6;color:#ff2bd6" onclick="openShop(&quot;mission&quot;)">🔫 В МАГАЗИН</button> ' : ''}
       <button class="btn" style="border-color:#ff2bd6;color:#ff2bd6;box-shadow:0 0 20px rgba(255,43,214,0.5)" onclick="startGame()">▶ ПОПРОБОВАТЬ СНОВА</button>
+      <button class="btn" style="margin-left:10px;border-color:#ffd166;color:#ffd166" onclick="openGarageFromMenu()">▸ ГАРАЖ</button>
+      <button class="btn" style="margin-left:10px;border-color:#00f5ff;color:#00f5ff" onclick="goToMenu()">◀ МЕНЮ</button>
     `;
     }
     resultEl.classList.remove('hidden');
@@ -1802,8 +2183,7 @@ function update(dt) {
     // FIX #6: turn direction does NOT invert when reversing
     // Use player.speed sign to determine if going forward or backward
     // But turn input always maps: left = counterclockwise, right = clockwise (absolute)
-    const movingBackward = player.speed < -10;
-    const turnDir = movingBackward ? -1 : 1;
+    const turnDir = 1;
     if (left)  player.angle -= player.turnSpeed * turnFactor * lsBoost * dt * turnDir;
     if (right) player.angle += player.turnSpeed * turnFactor * lsBoost * dt * turnDir;
 
@@ -1826,20 +2206,36 @@ function update(dt) {
 
     const pRect = getPlayerRect();
 
+    if (shopZone) {
+        const drivePad = getShopDrivePad();
+        shopZone.active = !!drivePad && rectsOverlap(pRect, drivePad);
+        if (shopZone.active && keys.has('fire')) {
+            openGarageFromDrive();
+            keys.delete('fire');
+            return;
+        }
+    }
+
     const onRoad = roads.some(r => rectsOverlap(pRect, r));
     if (!onRoad) {
         player.x = oldX; player.y = oldY;
-        player.speed *= -0.18;
+        player.speed = 0;
         player.hp -= 4 * dt;
         resetCombo();
         offroadRadioCooldown -= dt;
         if (offroadRadioCooldown <= 0) { radio.say('offroad', 'danger'); offroadRadioCooldown = 8; }
     }
 
+    if (shopZone && rectsOverlap(pRect, shopZone)) {
+        player.x = oldX; player.y = oldY;
+        player.speed = 0;
+        shake = Math.max(shake, 5);
+    }
+
     for (const b of buildings) {
         if (rectsOverlap(pRect, b)) {
             player.x = oldX; player.y = oldY;
-            player.speed *= -0.38;
+            player.speed = 0;
             if (player.invincible <= 0) {
                 const dmg = 18 * (1 - player.damageReduction);
                 player.hp -= dmg * dt;
@@ -1853,7 +2249,7 @@ function update(dt) {
     for (const b of barricades) {
         if (rectsOverlap(pRect, getBarricadeRect(b))) {
             player.x = oldX; player.y = oldY;
-            player.speed *= -0.42;
+            player.speed = 0;
             if (player.invincible <= 0) {
                 const dmg = 18 * (1 - player.damageReduction);
                 player.hp -= dmg * dt;
@@ -1995,10 +2391,22 @@ function update(dt) {
         return;
     }
 
+    if (currentLevelConfig && currentLevelConfig.hasBoss && !bossSpawned) {
+        const arena = getBossArenaRect();
+        if (arena && rectsOverlap(pRect, arena)) {
+            bossSpawned = true;
+            spawnBoss();
+            shake = Math.max(shake, 18);
+            flash = Math.max(flash, 0.25); flashColor = 'rgba(255,43,214,';
+        }
+    }
+
     if (currentLevelConfig && (currentLevelConfig.hasBoss || currentLevelConfig.type === 'robot')) {
         updatePlayerBullets(dt);
         updateBossBullets(dt);
+        updateRobotBullets(dt);
         updateMissiles(dt);
+        updateRobots(dt);
         updateBoss(dt);
         if (keys.has('fire')) fireBullet();
     }
@@ -2012,7 +2420,7 @@ function update(dt) {
     }
 
     const bossAlive = currentLevelConfig && currentLevelConfig.hasBoss && boss && !boss.dead;
-    if (currentLevelConfig && currentLevelConfig.type === 'robot' && drones.length === 0) {
+    if (currentLevelConfig && currentLevelConfig.type === 'robot' && robots.length === 0) {
         const timeBonus = Math.floor(timeLeft * 28);
         const hpBonus   = Math.floor(player.hp * 12);
         const scoreBonus = Math.floor(player.score + 1500);
@@ -2073,6 +2481,7 @@ function draw() {
     drawRoadLights();
     drawRouteBeacons();
     drawDestination();
+    drawShopZone();
     drawBuildings();
     drawNeonSigns();
     drawLandmarkSigns();
@@ -2081,11 +2490,13 @@ function draw() {
     drawBoostPads();
     drawBonuses();
     drawDrones();
+    drawRobots();
     drawCarTrails();
     drawPlayer();
     drawPlayerBullets();
     drawMissiles();
     drawBossBullets();
+    drawRobotBullets();
     drawBoss();
     drawParticles();
     drawFloatingTexts();
@@ -2217,14 +2628,15 @@ function drawRoadLights() {
 
 function drawRouteBeacons() {
     if (!recommendedRouteVisible) return;
+    const pts = gpsRoutePoints.length > 1 ? gpsRoutePoints : routeBeacons;
     ctx.save();
     ctx.lineWidth = 4; ctx.lineCap = 'round';
     ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 12;
     ctx.strokeStyle = 'rgba(255,209,102,0.65)';
     ctx.setLineDash([18, 14]);
     ctx.beginPath();
-    ctx.moveTo(routeBeacons[0].x, routeBeacons[0].y);
-    for (let i=1; i<routeBeacons.length; i++) ctx.lineTo(routeBeacons[i].x, routeBeacons[i].y);
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i=1; i<pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
     ctx.stroke();
     ctx.setLineDash([]);
     const t = performance.now() / 1000;
@@ -2256,7 +2668,40 @@ function drawDestination() {
     ctx.fillText(isBossLvl ? 'ESCAPE ZONE' : isRobotLvl ? 'EXTRACT ZONE' : 'ARCADE CLUB', dest.x+dest.w/2, dest.y+55);
     ctx.fillStyle = bossStillAlive || (isRobotLvl && drones.length > 0) ? '#ff2bd6' : '#ffd166';
     ctx.font = '11px Courier New';
-    ctx.fillText(bossStillAlive ? '⚠ СНАЧАЛА УБЕЙ BOSСА!' : isRobotLvl && drones.length > 0 ? `ROBOTS LEFT: ${drones.length}` : 'INSERT CARTRIDGE HERE', dest.x+dest.w/2, dest.y+76);
+    ctx.fillText(bossStillAlive ? '⚠ СНАЧАЛА УБЕЙ BOSСА!' : isRobotLvl && robots.length > 0 ? `ROBOTS LEFT: ${robots.length}` : 'INSERT CARTRIDGE HERE', dest.x+dest.w/2, dest.y+76);
+    ctx.restore();
+}
+
+function drawShopZone() {
+    if (!shopZone) return;
+    shopZone.phase += 0.035;
+    const active = shopZone.active;
+    ctx.save();
+    ctx.shadowColor = active ? '#ffd166' : '#00f5ff';
+    ctx.shadowBlur = active ? 34 : 20;
+    ctx.fillStyle = 'rgba(8,0,20,0.95)';
+    ctx.fillRect(shopZone.x, shopZone.y, shopZone.w, shopZone.h);
+    ctx.strokeStyle = active ? '#ffd166' : '#00f5ff';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(shopZone.x, shopZone.y, shopZone.w, shopZone.h);
+    ctx.fillStyle = 'rgba(255,43,214,0.16)';
+    ctx.fillRect(shopZone.x + 12, shopZone.y + 18, shopZone.w - 24, 30);
+    ctx.fillStyle = active ? '#ffd166' : '#ff2bd6';
+    ctx.font = 'bold 14px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('GARAGE', shopZone.x + shopZone.w/2, shopZone.y + 34);
+    ctx.font = 'bold 10px Courier New';
+    ctx.fillStyle = '#00f5ff';
+    ctx.fillText(active ? 'F / ENTER — SHOP' : 'UPGRADES', shopZone.x + shopZone.w/2, shopZone.y + 72);
+    ctx.fillStyle = '#ffd166';
+    for (let i = 0; i < 5; i++) ctx.fillRect(shopZone.x + 28 + i*28, shopZone.y + 96, 15, 12);
+    ctx.beginPath();
+    ctx.arc(shopZone.doorX, shopZone.doorY, active ? 18 : 12, 0, Math.PI*2);
+    ctx.fillStyle = active ? 'rgba(255,209,102,0.45)' : 'rgba(0,245,255,0.25)';
+    ctx.fill();
+    ctx.strokeStyle = active ? '#ffd166' : '#00f5ff';
+    ctx.stroke();
     ctx.restore();
 }
 
@@ -2380,6 +2825,42 @@ function drawDrones() {
     }
 }
 
+function drawRobots() {
+    for (const r of robots) {
+        ctx.save();
+        ctx.translate(r.x, r.y);
+        const pulse = 0.75 + Math.sin(r.phase * 3) * 0.15;
+        ctx.shadowColor = '#ff2bd6'; ctx.shadowBlur = 18;
+        ctx.fillStyle = '#1a0028';
+        ctx.strokeStyle = '#ff2bd6';
+        ctx.lineWidth = 3;
+        ctx.fillRect(-r.w/2, -r.h/2, r.w, r.h);
+        ctx.strokeRect(-r.w/2, -r.h/2, r.w, r.h);
+        ctx.fillStyle = '#ffd166';
+        ctx.fillRect(-13, -10, 9, 8);
+        ctx.fillRect(4, -10, 9, 8);
+        ctx.fillStyle = '#00f5ff';
+        ctx.fillRect(-16, 8, 32, 8);
+        ctx.strokeStyle = `rgba(255,209,102,${pulse})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(-26, 0); ctx.lineTo(-38, -14); ctx.moveTo(26, 0); ctx.lineTo(38, -14); ctx.stroke();
+        const pct = r.hp / r.maxHp;
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(-28, -36, 56, 6);
+        ctx.fillStyle = pct > 0.45 ? '#ff2bd6' : '#ff6b6b'; ctx.fillRect(-28, -36, 56 * pct, 6);
+        ctx.restore();
+    }
+}
+
+function drawRobotBullets() {
+    ctx.save();
+    for (const b of robotBullets) {
+        ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 14; ctx.fillStyle = '#ffd166';
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+}
+
 function drawCarTrails() {
     ctx.save();
     for (const t of carTrails) {
@@ -2428,15 +2909,15 @@ function drawPlayer() {
         ctx.beginPath(); ctx.moveTo(-8, player.h/2); ctx.lineTo(0, player.h/2+42+Math.random()*18); ctx.lineTo(8, player.h/2); ctx.fill();
     }
     // Weapon indicators
-    if (playerWeapons.missile) {
+    if (activeWeapon === 'missile' && playerWeapons.missile) {
         ctx.shadowColor = '#ff9900'; ctx.shadowBlur = 10; ctx.fillStyle = '#ff9900';
         ctx.fillRect(-10, -player.h/2-20, 6, 22); ctx.fillRect(4, -player.h/2-20, 6, 22);
         ctx.shadowBlur = 0;
-    } else if (playerWeapons.shotgun) {
+    } else if (activeWeapon === 'shotgun' && playerWeapons.shotgun) {
         ctx.shadowColor = '#ff2bd6'; ctx.shadowBlur = 10; ctx.fillStyle = '#ff2bd6';
         ctx.fillRect(-8, -player.h/2-14, 16, 16); ctx.fillRect(-10, -player.h/2-18, 6, 6); ctx.fillRect(4, -player.h/2-18, 6, 6);
         ctx.shadowBlur = 0;
-    } else if (playerWeapons.gun) {
+    } else if (activeWeapon === 'gun' && playerWeapons.gun) {
         ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 10; ctx.fillStyle = '#ffd166';
         ctx.fillRect(-5, -player.h/2-18, 10, 20); ctx.fillRect(-8, -player.h/2-8, 16, 8);
         ctx.shadowBlur = 0;
@@ -2550,7 +3031,7 @@ function drawDirectionArrow() {
     ctx.save();
     ctx.font = 'bold 13px Courier New'; ctx.textAlign = 'center';
     ctx.fillStyle = '#ffd166'; ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 10;
-    const targetLabel = currentLevelConfig && currentLevelConfig.type === 'robot' ? `ROBOTS · ${drones.length}` : `CLUB · ${dMeters}m`;
+    const targetLabel = currentLevelConfig && currentLevelConfig.type === 'robot' ? `ROBOTS · ${robots.length}` : `CLUB · ${dMeters}m`;
     ctx.fillText(targetLabel, cx, cy + 38);
     ctx.restore();
 }
@@ -2586,19 +3067,20 @@ function drawHUD() {
     ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(0,245,255,0.45)'; ctx.font = '11px Courier New';
     const musicHint = audio.muted ? ' N=MUSIC:OFF' : ' N=MUSIC:ON';
     const fireHint = (currentLevelConfig && (currentLevelConfig.hasBoss || currentLevelConfig.type === 'robot')) ? '  F=FIRE' : '';
-    ctx.fillText(`TAB=ROUTE  M=MAP  R=RESTART  SPACE=PAUSE${fireHint}${musicHint}`, W - 28, 36);
+    ctx.fillText(`TAB=ROUTE  M=MAP  R=RESTART  ESC=MENU  SPACE=PAUSE${fireHint}${musicHint}`, W - 28, 36);
     if (currentLevelConfig && (currentLevelConfig.hasBoss || currentLevelConfig.type === 'robot')) {
         ctx.textAlign = 'left'; ctx.font = 'bold 12px Courier New';
         const hasAnyWeapon = playerWeapons.gun || playerWeapons.shotgun || playerWeapons.missile;
-        const weaponLabel = playerWeapons.missile ? '🚀 РАКЕТНИЦА' : playerWeapons.shotgun ? '💥 ДРОБОВИК' : playerWeapons.gun ? '🔫 ПУШКА' : '⚠ НЕТ ОРУЖИЯ';
-        const onCooldown = (player._missileCooldown||0) > 0 || (player._shotgunCooldown||0) > 0 || (player._gunCooldown||0) > 0;
-        ctx.fillStyle = hasAnyWeapon ? (onCooldown ? '#ffd166' : '#3cff7e') : '#ff2bd6';
+        const activeOk = hasAnyWeapon && playerWeapons[activeWeapon];
+        const weaponLabel = activeWeapon === 'missile' && playerWeapons.missile ? '🚀 РАКЕТНИЦА' : activeWeapon === 'shotgun' && playerWeapons.shotgun ? '💥 ДРОБОВИК' : activeWeapon === 'gun' && playerWeapons.gun ? '🔫 ПУШКА' : '⚠ НЕТ ОРУЖИЯ';
+        const cdMax = activeWeapon === 'missile' ? 1.8 : activeWeapon === 'shotgun' ? 0.8 : 0.38;
+        const cdVal = activeWeapon === 'missile' ? (player._missileCooldown||0) : activeWeapon === 'shotgun' ? (player._shotgunCooldown||0) : (player._gunCooldown||0);
+        const onCooldown = cdVal > 0;
+        ctx.fillStyle = activeOk ? (onCooldown ? '#ffd166' : '#3cff7e') : '#ff2bd6';
         ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 8;
-        ctx.fillText(weaponLabel + (hasAnyWeapon ? (onCooldown ? ' · COOLDOWN' : ' · READY') : ''), 24, 232);
+        ctx.fillText(weaponLabel + (activeOk ? (onCooldown ? ' · COOLDOWN' : ' · READY') : '') + '  [1/2/3]', 24, 232);
         ctx.shadowBlur = 0;
-        if (playerWeapons.missile && (player._missileCooldown||0) > 0) {
-            drawBar(24, 238, 120, 8, 1 - (player._missileCooldown||0)/1.8, '#ff9900', '');
-        }
+        if (activeOk && onCooldown) drawBar(24, 238, 120, 8, 1 - cdVal/cdMax, '#ff9900', '');
     }
     if (levelBadge) levelBadge.textContent = `LEVEL ${currentLevelConfig?.id} · ${currentLevelConfig?.name} · COINS ${coins}`;
     ctx.restore();
@@ -2632,13 +3114,15 @@ function drawMinimap() {
     for (const r of roads) ctx.fillRect(mx+r.x*sx, my+r.y*sy, r.w*sx, r.h*sy);
     ctx.fillStyle = '#ffd166';
     for (const b of barricades) ctx.fillRect(mx+(b.x-b.w/2)*sx, my+(b.y-b.h/2)*sy, Math.max(2,b.w*sx), Math.max(2,b.h*sy));
-    if (recommendedRouteVisible && routeBeacons.length > 1) {
+    if (recommendedRouteVisible && (gpsRoutePoints.length > 1 || routeBeacons.length > 1)) {
+        const pts = gpsRoutePoints.length > 1 ? gpsRoutePoints : routeBeacons;
         ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.moveTo(mx+routeBeacons[0].x*sx, my+routeBeacons[0].y*sy);
-        for (let i=1; i<routeBeacons.length; i++) ctx.lineTo(mx+routeBeacons[i].x*sx, my+routeBeacons[i].y*sy);
+        ctx.beginPath(); ctx.moveTo(mx+pts[0].x*sx, my+pts[0].y*sy);
+        for (let i=1; i<pts.length; i++) ctx.lineTo(mx+pts[i].x*sx, my+pts[i].y*sy);
         ctx.stroke();
     }
     ctx.fillStyle = '#00f5ff'; ctx.fillRect(mx+dest.x*sx, my+dest.y*sy, dest.w*sx, dest.h*sy);
+    if (shopZone) { ctx.fillStyle = '#ffd166'; ctx.fillRect(mx+shopZone.x*sx, my+shopZone.y*sy, Math.max(3,shopZone.w*sx), Math.max(3,shopZone.h*sy)); }
     // Radar: show larger detection circles around drones
     if (playerWeapons.radar) {
         for (const d of drones) {
@@ -2648,6 +3132,8 @@ function drawMinimap() {
     }
     ctx.fillStyle = '#ff2bd6';
     for (const d of drones) ctx.fillRect(mx+d.x*sx-2, my+d.y*sy-2, 4, 4);
+    ctx.fillStyle = '#ffd166';
+    for (const r of robots) ctx.fillRect(mx+r.x*sx-3, my+r.y*sy-3, 6, 6);
     if (boss && !boss.dead) {
         ctx.shadowColor = '#ff0000'; ctx.shadowBlur = 10; ctx.fillStyle = '#ff0000';
         ctx.beginPath(); ctx.arc(mx+boss.x*sx, my+boss.y*sy, 7, 0, Math.PI*2); ctx.fill();

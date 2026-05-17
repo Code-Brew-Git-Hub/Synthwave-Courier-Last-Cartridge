@@ -365,3 +365,74 @@ html, body {
 @media (max-width: 768px), (pointer: coarse) {
     #fire-btn.active { display: flex; }
 }
+.wide-panel { width: min(980px, 96vw); }
+.level-list {
+    display: grid;
+    gap: 10px;
+    margin: 18px 0;
+    max-height: 58vh;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+.level-card {
+    border: 2px solid rgba(0,245,255,0.35);
+    background: rgba(0,245,255,0.04);
+    padding: 12px 14px;
+    display: grid;
+    grid-template-columns: 70px 1fr 120px 130px;
+    gap: 12px;
+    align-items: center;
+    text-align: left;
+    cursor: pointer;
+}
+.level-card:hover { border-color: #00f5ff; background: rgba(0,245,255,0.1); }
+.level-card.locked { opacity: 0.42; cursor: not-allowed; border-color: rgba(255,43,214,0.35); }
+.level-card.completed { border-color: rgba(60,255,126,0.5); }
+.level-num { color: #ffd166; font-size: 24px; font-weight: 900; text-shadow: 0 0 12px #ffd166; }
+.level-name { color: #00f5ff; font-weight: bold; letter-spacing: 1px; }
+.level-meta { color: #c8b8f0; font-size: 11px; margin-top: 4px; }
+.level-status { color: #ff2bd6; font-size: 11px; font-weight: bold; letter-spacing: 1px; text-align: right; }
+.level-best { color: #ffd166; font-size: 11px; text-align: right; }
+.shop-item.equipped { border-color: #ffd166; background: rgba(255,209,102,0.08); box-shadow: 0 0 18px rgba(255,209,102,0.22); }
+.shop-item.locked { opacity: 0.45; cursor: not-allowed; }
+@media (max-width: 760px) {
+    .level-card { grid-template-columns: 44px 1fr; }
+    .level-status, .level-best { text-align: left; }
+}
+
+.confirm-panel {
+    width: min(680px, 94vw);
+    border-color: #ffd166;
+    box-shadow: 0 0 38px rgba(255,209,102,0.75), 0 0 90px rgba(255,43,214,0.25), inset 0 0 34px rgba(255,209,102,0.08);
+}
+.confirm-title {
+    color: #ffd166;
+    text-shadow: 0 0 22px #ffd166, 0 0 42px rgba(255,209,102,0.55), 4px 4px 0 #ff2bd6;
+}
+.confirm-text {
+    color: #f3dc9a;
+    font-size: clamp(14px, 2vw, 17px);
+    margin-bottom: 8px;
+}
+.confirm-actions {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+.danger-btn {
+    border-color: #ff2bd6;
+    color: #ff2bd6;
+    box-shadow: 0 0 20px rgba(255,43,214,0.45);
+}
+.danger-btn:hover {
+    background: rgba(255,43,214,0.14);
+    box-shadow: 0 0 32px rgba(255,43,214,0.72);
+}
+.confirm-hint {
+    margin: 16px 0 0;
+    color: rgba(200,184,240,0.72);
+    font-size: 11px;
+    letter-spacing: 1px;
+}
